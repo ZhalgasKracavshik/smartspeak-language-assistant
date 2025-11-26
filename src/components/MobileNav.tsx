@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, BookOpen, Mic, User, Globe } from 'lucide-react';
+import { Home, Mic, BookOpen, MessageSquare, BookMarked, Bot, Gamepad, GraduationCap, FileText, Globe, User, Settings } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -9,50 +9,44 @@ interface MobileNavProps {
 }
 
 export function MobileNav({ activeTab, onTabChange }: MobileNavProps) {
-    const { t } = useLanguage();
+    const { t, language } = useLanguage();
 
     const navItems = [
         { id: 'dashboard', icon: Home, label: t.home },
-        { id: 'learn', icon: BookOpen, label: 'Learn' }, // Groups Vocab & Grammar
-        { id: 'practice', icon: Mic, label: 'Practice' }, // Groups Voice & Dialogues
-        { id: 'content', icon: Globe, label: 'Content' },
-        { id: 'profile', icon: User, label: 'Profile' }, // New Profile/Settings tab
+        { id: 'voice', icon: Mic, label: t.voicePractice },
+        { id: 'vocabulary', icon: BookOpen, label: t.smartVocabulary },
+        { id: 'dialogues', icon: MessageSquare, label: t.dialogues },
+        { id: 'grammar', icon: BookMarked, label: t.grammarCoach },
+        { id: 'chat', icon: Bot, label: 'Smart Chat' },
+        { id: 'games', icon: Gamepad, label: 'Mini-Games' },
+        { id: 'classes', icon: GraduationCap, label: language === 'kz' ? 'Сыныптар' : 'Классы' },
+        { id: 'terms', icon: FileText, label: language === 'kz' ? 'Терминдер' : 'Термины' },
+        { id: 'content', icon: Globe, label: t.contentHub },
+        { id: 'profile', icon: User, label: t.profile },
+        { id: 'settings', icon: Settings, label: 'Settings' },
     ];
 
-    // Logic to highlight parent tabs if a sub-tab is active
-    const isTabActive = (itemId: string) => {
-        if (itemId === 'learn' && (activeTab === 'vocabulary' || activeTab === 'grammar')) return true;
-        if (itemId === 'practice' && (activeTab === 'voice' || activeTab === 'dialogues')) return true;
-        return activeTab === itemId;
-    };
-
-    const handleTabClick = (itemId: string) => {
-        if (itemId === 'learn') onTabChange('vocabulary');
-        else if (itemId === 'practice') onTabChange('voice');
-        else onTabChange(itemId);
-    };
-
     return (
-        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-6 py-2 z-50 safe-area-bottom">
-            <div className="flex justify-between items-center">
+        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 safe-area-bottom overflow-x-auto">
+            <div className="flex items-center px-2 py-2 min-w-max">
                 {navItems.map((item) => {
                     const Icon = item.icon;
-                    const isActive = isTabActive(item.id);
+                    const isActive = activeTab === item.id;
 
                     return (
                         <button
                             key={item.id}
-                            onClick={() => handleTabClick(item.id)}
-                            className={`flex flex-col items-center gap-1 p-2 transition-colors ${isActive ? 'text-blue-600' : 'text-gray-400 hover:text-gray-600'
+                            onClick={() => onTabChange(item.id)}
+                            className={`flex flex-col items-center gap-1 px-3 py-2 flex-shrink-0 transition-colors ${isActive ? 'text-blue-600' : 'text-gray-400 hover:text-gray-600'
                                 }`}
                         >
                             <motion.div
                                 whileTap={{ scale: 0.9 }}
                                 animate={isActive ? { y: -2 } : { y: 0 }}
                             >
-                                <Icon className={`size-6 ${isActive ? 'fill-current' : ''}`} />
+                                <Icon className={`size-5 ${isActive ? 'fill-current' : ''}`} />
                             </motion.div>
-                            <span className="text-[10px] font-medium">{item.label}</span>
+                            <span className="text-[9px] font-medium whitespace-nowrap">{item.label}</span>
                         </button>
                     );
                 })}
