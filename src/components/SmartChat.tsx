@@ -9,6 +9,8 @@ import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { useLanguage } from '../contexts/LanguageContext';
 import { aiService } from '../services/aiService';
 import { supabase } from '../lib/supabase';
+import { rateLimiter } from '../services/rateLimiter';
+import { inputSanitizer } from '../services/inputSanitizer';
 
 interface Message {
     id: string;
@@ -23,6 +25,7 @@ export function SmartChat() {
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const scrollAreaRef = useRef<HTMLDivElement>(null);
+    const messagesEndRef = useRef<HTMLDivElement>(null);
 
     // Load history on mount
     useEffect(() => {
@@ -84,7 +87,7 @@ export function SmartChat() {
         loadMessages();
     }, [language]);
 
-    // Save history on change
+    // Save history and auto-scroll
     useEffect(() => {
         const saveMessages = async () => {
             if (messages.length === 0) return;
@@ -111,18 +114,39 @@ export function SmartChat() {
 
         saveMessages();
 
+        // Auto-scroll to bottom
         if (scrollAreaRef.current) {
-            scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
+            const scrollElement = scrollAreaRef.current;
+            // Scroll to the bottom smoothly
+            scrollElement.scrollTop = scrollElement.scrollHeight;
         }
-    }, [messages]);
+    }, [messages, isLoading]);
 
     const handleSend = async () => {
         if (!input.trim()) return;
 
+        // Rate Limit Check
+        const rateCheck = rateLimiter.check('chat');
+        if (!rateCheck.allowed) {
+            const errorMessage: Message = {
+                id: Date.now().toString(),
+                role: 'assistant',
+                content: `You are sending messages too fast. Please wait ${rateCheck.waitTime} seconds.`,
+                timestamp: new Date()
+            };
+            setMessages(prev => [...prev, errorMessage]);
+            return;
+        }
+        rateLimiter.increment('chat');
+
+        // Input Sanitization
+        const sanitizedInput = inputSanitizer.sanitizeText(input);
+        if (!sanitizedInput.trim()) return;
+
         const userMessage: Message = {
             id: Date.now().toString(),
             role: 'user',
-            content: input,
+            content: sanitizedInput,
             timestamp: new Date()
         };
 
@@ -131,7 +155,7 @@ export function SmartChat() {
         setIsLoading(true);
 
         try {
-            const response = await aiService.getChatResponse(input);
+            const response = await aiService.getChatResponse(sanitizedInput);
 
             if (response.error) {
                 const errorMessage: Message = {
@@ -194,7 +218,7 @@ export function SmartChat() {
                 </CardHeader>
 
                 <CardContent className="flex-1 overflow-hidden p-0 flex flex-col">
-                    <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
+                    <div ref={scrollAreaRef} className="flex-1 overflow-y-auto p-4">
                         <div className="space-y-4">
                             {messages.map((message) => (
                                 <motion.div
@@ -242,8 +266,9 @@ export function SmartChat() {
                                     </div>
                                 </motion.div>
                             )}
+                            <div ref={messagesEndRef} />
                         </div>
-                    </ScrollArea>
+                    </div>
 
                     <div className="p-4 bg-white border-t">
                         <div className="flex gap-2">

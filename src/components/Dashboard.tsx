@@ -11,6 +11,7 @@ import { AnalyticsCharts } from './AnalyticsCharts';
 import { timeTrackingService } from '../services/timeTrackingService';
 import { SmartChat } from './SmartChat';
 import { Profile } from './Profile';
+import { generateDailyContent } from '../services/dailyContentService';
 
 interface DashboardProps {
   onNavigate: (tab: string) => void;
@@ -23,6 +24,8 @@ export function Dashboard({ onNavigate, activeTab, onLogout }: DashboardProps) {
   const [progress, setProgress] = useState<UserProgress>(getProgress());
   const [lastActivity, setLastActivity] = useState<{ module: string; timestamp: string } | null>(null);
   const [timeSpent, setTimeSpent] = useState(0);
+  const [dailyContent, setDailyContent] = useState<any[]>([]);
+  const [isLoadingContent, setIsLoadingContent] = useState(false);
 
   useEffect(() => {
     // Check if guest
@@ -37,6 +40,35 @@ export function Dashboard({ onNavigate, activeTab, onLogout }: DashboardProps) {
 
     // Get time spent today
     setTimeSpent(timeTrackingService.getTodayMinutes());
+
+    // Load daily content
+    const loadDailyContent = async () => {
+      if (isGuest) return;
+
+      const profile = getUserProfileService().getProfile();
+      const today = new Date().toDateString();
+
+      // Check if we already have today's content
+      if (profile?.dailyContent && profile.dailyContent.date === today) {
+        setDailyContent(profile.dailyContent.items);
+      } else {
+        // Generate new content
+        setIsLoadingContent(true);
+        const content = await generateDailyContent();
+        setDailyContent(content);
+
+        // Save to profile
+        getUserProfileService().updateProfile({
+          dailyContent: {
+            date: today,
+            items: content
+          }
+        });
+        setIsLoadingContent(false);
+      }
+    };
+
+    loadDailyContent();
   }, []);
 
   const isGuest = typeof window !== 'undefined' && localStorage.getItem('smartspeak-is-guest') === 'true';

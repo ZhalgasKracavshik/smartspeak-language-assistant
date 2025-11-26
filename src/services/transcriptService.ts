@@ -1,6 +1,6 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+// Transcript service for fetching YouTube subtitles
+// For AI-generated transcripts, use aiTranscription.ts instead
 
-const genAI = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY || '');
 
 export interface TranscriptSegment {
     text: string;
@@ -67,17 +67,17 @@ export async function fetchTranscript(
 ): Promise<TranscriptSegment[]> {
     const cached = getCachedTranscript(videoId);
     if (cached) {
-        console.log('Returning cached transcript for', videoId);
+
         return cached;
     }
 
     try {
-        console.log('Fetching YouTube transcript for', videoId);
+
         const segments = await fetchYouTubeTranscript(videoId);
         saveToCache(videoId, segments);
         return segments;
     } catch (youtubeError) {
-        console.log('YouTube transcript failed:', youtubeError);
+
         return [{
             text: type === 'song'
                 ? 'Lyrics not available. YouTube captions may be disabled for this video.'

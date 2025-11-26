@@ -15,6 +15,17 @@ export interface UserProfile {
         module: string;
         timestamp: string;
     };
+    dailyContent?: {
+        date: string;
+        items: Array<{
+            id: string;
+            title: string;
+            type: 'video' | 'article' | 'song';
+            url: string;
+            thumbnail?: string;
+            description?: string;
+        }>;
+    };
 }
 
 const STORAGE_KEY = 'smartspeak_user_profile';

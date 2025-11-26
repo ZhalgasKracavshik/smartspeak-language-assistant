@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Home, Mic, BookOpen, MessageSquare, BookMarked, TrendingUp, Sparkles, Globe, Zap, Trophy, Bot, User, Settings, LogIn } from 'lucide-react';
+import { Home, Mic, BookOpen, MessageSquare, BookMarked, TrendingUp, Sparkles, Globe, Zap, Trophy, Bot, User, Settings, LogIn, Gamepad, GraduationCap, FileText } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { Button } from './ui/button';
@@ -30,6 +30,9 @@ export function Sidebar({ activeTab, onTabChange, onLogin }: SidebarProps & { on
     { id: 'dialogues', label: t.dialogues, icon: MessageSquare },
     { id: 'grammar', label: t.grammarCoach, icon: BookMarked },
     { id: 'chat', label: 'Smart Chat', icon: Bot },
+    { id: 'games', label: 'Mini-Games', icon: Gamepad },
+    { id: 'classes', label: language === 'kz' ? 'Сыныптар' : 'Классы', icon: GraduationCap },
+    { id: 'terms', label: language === 'kz' ? 'Терминдер' : 'Термины', icon: FileText },
     { id: 'content', label: t.contentHub, icon: Globe },
     { id: 'profile', label: t.profile, icon: User },
     { id: 'settings', label: 'Settings', icon: Settings },

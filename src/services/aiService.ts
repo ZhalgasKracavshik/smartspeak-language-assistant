@@ -23,7 +23,7 @@ export const aiService = {
             }
 
             const data = await response.json();
-            return { text: data.text || '' };
+            return { text: data.reply || '' };
         } catch (error) {
             console.error('AI Service Error:', error);
             return { text: '', error: 'Network error or invalid response.' };
@@ -44,7 +44,7 @@ export const aiService = {
                 },
                 body: JSON.stringify({
                     message,
-                    context
+                    history: []
                 })
             });
 
@@ -54,7 +54,7 @@ export const aiService = {
             }
 
             const data = await response.json();
-            return { text: data.text || '' };
+            return { text: data.reply || '' };
         } catch (error) {
             console.error('AI Service Error:', error);
             return { text: '', error: 'Network error or invalid response.' };

@@ -9,6 +9,7 @@ import { supabase } from '../lib/supabase';
 import { getUserProfileService } from '../services/userProfileService';
 import { logSecurityEvent } from '../services/securityLogger';
 import { logGuestAccessAction } from '../app/actions/security';
+import { rateLimiter } from '../services/rateLimiter';
 
 interface AuthProps {
     onLogin: () => void;
@@ -47,6 +48,14 @@ export function Auth({ onLogin }: AuthProps) {
 
     const handleSignup = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Rate Limit Check
+        const rateCheck = rateLimiter.check('signup');
+        if (!rateCheck.allowed) {
+            setError(`Too many signup attempts. Please try again in ${rateCheck.waitTime} seconds.`);
+            return;
+        }
+
         if (!isValidEmail || !isValidPassword || !fullName.trim()) {
             setError('Please fill all fields correctly');
             return;
@@ -95,6 +104,7 @@ export function Auth({ onLogin }: AuthProps) {
                 alert('Registration successful! Please check your email to verify your account.');
             }
         } catch (error: any) {
+            rateLimiter.increment('signup'); // Count failed attempts
             await logSecurityEvent({
                 ip_address: 'client',
                 action: 'failed_login',
@@ -109,6 +119,14 @@ export function Auth({ onLogin }: AuthProps) {
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Rate Limit Check
+        const rateCheck = rateLimiter.check('login');
+        if (!rateCheck.allowed) {
+            setError(`Too many login attempts. Please try again in ${rateCheck.waitTime} seconds.`);
+            return;
+        }
+
         if (!isValidEmail) {
             setError('Please enter a valid email');
             return;
@@ -135,6 +153,7 @@ export function Auth({ onLogin }: AuthProps) {
                 onLogin();
             }
         } catch (error: any) {
+            rateLimiter.increment('login'); // Count failed attempts
             await logSecurityEvent({
                 ip_address: 'client',
                 action: 'failed_login',

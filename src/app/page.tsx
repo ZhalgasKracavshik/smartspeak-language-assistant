@@ -1,42 +1,45 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Sidebar } from '../src/components/Sidebar';
-import { Dashboard } from '../src/components/Dashboard';
-import { VoicePractice } from '../src/components/VoicePractice';
-import { SmartVocabulary } from '../src/components/SmartVocabulary';
-import { DialogueGenerator } from '../src/components/DialogueGenerator';
-import { GrammarCoach } from '../src/components/GrammarCoach';
-import { getUserProfileService } from '../src/services/userProfileService';
-import { ContentHub } from '../src/components/ContentHub';
-import { MobileNav } from '../src/components/MobileNav';
-import { SmartChat } from '../src/components/SmartChat';
-import { Settings } from '../src/components/Settings';
-import { Auth } from '../src/components/Auth';
+import { Sidebar } from '../components/Sidebar';
+import { Dashboard } from '../components/Dashboard';
+import { VoicePractice } from '../components/VoicePractice';
+import { SmartVocabulary } from '../components/SmartVocabulary';
+import { DialogueGenerator } from '../components/DialogueGenerator';
+import { GrammarCoach } from '../components/GrammarCoach';
+import { getUserProfileService } from '../services/userProfileService';
+import { ContentHub } from '../components/ContentHub';
+import { MobileNav } from '../components/MobileNav';
+import { SmartChat } from '../components/SmartChat';
+import { Settings } from '../components/Settings';
+import { Auth } from '../components/Auth';
+import { Classes } from '../components/Classes';
 import { ChevronRight } from 'lucide-react';
-import { timeTrackingService } from '../src/services/timeTrackingService';
-import { useLanguage } from '../src/contexts/LanguageContext';
-import { Onboarding } from '../src/components/Onboarding';
+import { timeTrackingService } from '../services/timeTrackingService';
+import { useLanguage } from '../contexts/LanguageContext';
+import { Onboarding } from '../components/Onboarding';
 
 function AppContent() {
     const [activeTab, setActiveTab] = useState('dashboard');
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [showOnboarding, setShowOnboarding] = useState(false);
-    const { t } = useLanguage();
+    const { t, language } = useLanguage();
 
     useEffect(() => {
-        // Start tracking time when app mounts
         timeTrackingService.startTracking();
 
-        // Check authentication status
         const checkAuth = () => {
-            const profileService = getUserProfileService();
-            const profile = profileService.getProfile();
-            setIsAuthenticated(!!profile);
+            try {
+                const profileService = getUserProfileService();
+                const profile = profileService.getProfile();
+                setIsAuthenticated(!!profile);
 
-            // Check onboarding status
-            if (profile && !profileService.hasCompletedOnboarding()) {
-                setShowOnboarding(true);
+                if (profile && !profileService.hasCompletedOnboarding()) {
+                    setShowOnboarding(true);
+                }
+            } catch (error) {
+                console.error('Auth check failed:', error);
+                setIsAuthenticated(false);
             }
         };
 
@@ -52,7 +55,6 @@ function AppContent() {
     };
 
     const handleLogout = () => {
-        // Clear guest flag and all local data
         localStorage.removeItem('smartspeak-is-guest');
         localStorage.removeItem('smartspeak-user-profile');
         setIsAuthenticated(false);
@@ -76,6 +78,8 @@ function AppContent() {
                 return <VoicePractice />;
             case 'vocabulary':
                 return <SmartVocabulary />;
+            case 'classes':
+                return <Classes />;
             case 'dialogues':
                 return <DialogueGenerator />;
             case 'grammar':
@@ -84,6 +88,18 @@ function AppContent() {
                 return <SmartChat />;
             case 'content':
                 return <ContentHub />;
+            case 'games':
+                if (typeof window !== 'undefined') {
+                    window.location.href = '/games';
+                }
+                return null;
+            case 'classes':
+                return <Classes />;
+            case 'terms':
+                if (typeof window !== 'undefined') {
+                    window.location.href = '/terms';
+                }
+                return null;
             case 'settings':
                 return <Settings onLogout={handleLogout} />;
             default:
@@ -100,6 +116,9 @@ function AppContent() {
             grammar: t.grammarCoach,
             content: t.contentHub,
             chat: 'Smart Chat',
+            games: 'Mini-Games',
+            classes: language === 'kz' ? 'Сыныптар' : 'Классы',
+            terms: language === 'kz' ? 'Терминдер' : 'Термины',
             progress: t.progress,
             profile: t.profile
         };
@@ -108,13 +127,11 @@ function AppContent() {
 
     return (
         <div className="flex min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-purple-50/20">
-            {/* Sidebar (Desktop) */}
             <div className="hidden md:block sticky top-0 h-screen">
                 <Sidebar activeTab={activeTab} onTabChange={setActiveTab} onLogin={handleLogout} />
             </div>
 
             <main className="flex-1 overflow-y-auto h-screen flex flex-col pb-16 md:pb-0">
-                {/* Breadcrumbs (Desktop) */}
                 <div className="hidden md:flex items-center gap-2 px-8 py-4 text-sm text-gray-500">
                     <span>SmartSpeak</span>
                     <ChevronRight className="size-4" />
@@ -126,7 +143,6 @@ function AppContent() {
                 </div>
             </main>
 
-            {/* Mobile Navigation (Bottom Bar) */}
             <MobileNav activeTab={activeTab} onTabChange={setActiveTab} />
         </div>
     );

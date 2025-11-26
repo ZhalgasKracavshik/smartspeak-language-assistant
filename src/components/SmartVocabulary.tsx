@@ -13,6 +13,7 @@ import { getAudioService } from '../services/audioService';
 import { SpacedRepetitionService, WordProgress } from '../services/spacedRepetition';
 import { generateTopicVocabularyAction } from '../app/actions/gemini';
 import { getUserProfileService } from '../services/userProfileService';
+import { SentenceBuilder } from './games/SentenceBuilder';
 
 export function SmartVocabulary() {
   const { language } = useLanguage();
@@ -77,7 +78,7 @@ export function SmartVocabulary() {
 
       const level = profile?.level || 'A1';
 
-      console.log(`Generating words for topic: ${topic}, level: ${level}`);
+
 
       const generated = await generateTopicVocabularyAction(topic, level);
 
@@ -92,11 +93,7 @@ export function SmartVocabulary() {
           level: level,
           category: topic,
           transcription: '',
-          example: {
-            en: item.context,
-            ru: item.context,
-            kz: item.context
-          },
+          example: item.context,
           exampleTranslation: {
             ru: item.translation,
             kz: item.translation
@@ -154,6 +151,8 @@ export function SmartVocabulary() {
     });
   };
 
+  const [testItems, setTestItems] = useState<Array<{ type: 'translation' | 'sentence', word: Word }>>([]);
+
   const startTest = (isReview: boolean = false) => {
     const wordsToTest = isReview ? dueWords : allWords.filter(w => savedWords.has(w.id));
 
@@ -164,134 +163,26 @@ export function SmartVocabulary() {
       );
       return;
     }
-    setReviewMode(isReview);
-    setTestMode(true);
+
+    const items: Array<{ type: 'translation' | 'sentence', word: Word }> = [];
+    const shuffled = [...wordsToTest].sort(() => Math.random() - 0.5);
+
+    shuffled.forEach(word => {
+      // 30% chance for sentence builder if example exists
+      if (word.example && Math.random() < 0.3) {
+        items.push({ type: 'sentence', word });
+      } else {
+        items.push({ type: 'translation', word });
+      }
+    });
+
+    setTestItems(items);
     setCurrentTestIndex(0);
     setTestScore(0);
     setShowAnswer(false);
+    setTestMode(true);
+    setReviewMode(isReview);
   };
-
-  const activeTestWords = useMemo(() => {
-    return reviewMode ? dueWords : allWords.filter(w => savedWords.has(w.id));
-  }, [reviewMode, dueWords, savedWords, allWords]);
-
-  const handleTestAnswer = (correct: boolean) => {
-    if (correct) {
-      setTestScore(prev => prev + 1);
-    }
-
-    if (reviewMode) {
-      const currentWord = activeTestWords[currentTestIndex];
-      const quality = correct ? 5 : 1;
-      const currentProgress = SpacedRepetitionService.getProgress(currentWord.id);
-      const newProgress = SpacedRepetitionService.calculateNextReview(currentProgress, quality);
-      SpacedRepetitionService.saveProgress(newProgress);
-    }
-
-    setShowAnswer(true);
-    setTimeout(() => {
-      if (currentTestIndex < activeTestWords.length - 1) {
-        setCurrentTestIndex(prev => prev + 1);
-        setShowAnswer(false);
-      } else {
-        setTestMode(false);
-        setReviewMode(false);
-        refreshDueWords();
-        alert(language === 'kz'
-          ? `Тест аяқталды! Сіздің ұпайыңыз: ${testScore + (correct ? 1 : 0)} / ${activeTestWords.length}`
-          : `Тест завершен! Ваш результат: ${testScore + (correct ? 1 : 0)} / ${activeTestWords.length}`
-        );
-      }
-    }, 1500);
-  };
-
-  const audioService = getAudioService();
-
-  const playAudio = async (word: string, e?: React.MouseEvent) => {
-    e?.stopPropagation();
-    try {
-      await audioService.speakWord(word);
-    } catch (error) {
-      console.error('Error playing audio:', error);
-    }
-  };
-
-  if (testMode && activeTestWords.length > 0) {
-    const currentWord = activeTestWords[currentTestIndex];
-    return (
-      <div className="p-8 max-w-4xl mx-auto">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 mb-2">
-                {reviewMode
-                  ? (language === 'kz' ? 'Қайталау' : 'Повторение')
-                  : (language === 'kz' ? 'Тест режимі' : 'Режим теста')}
-              </h1>
-              <p className="text-gray-600">
-                {language === 'kz' ? 'Сұрақ' : 'Вопрос'} {currentTestIndex + 1} / {activeTestWords.length}
-              </p>
-            </div>
-            {reviewMode && (
-              <div className="bg-orange-100 text-orange-700 px-4 py-2 rounded-full flex items-center gap-2">
-                <Brain className="size-5" />
-                <span className="font-medium">SRS Mode</span>
-              </div>
-            )}
-          </div>
-        </motion.div>
-
-        <Card className="border-0 shadow-2xl bg-gradient-to-br from-white to-purple-50/30">
-          <CardContent className="p-12">
-            <div className="text-center mb-8">
-              <p className="text-sm text-gray-500 mb-4">{language === 'kz' ? 'Аударманы таңдаңыз:' : 'Выберите перевод:'}</p>
-              <p className="text-4xl font-bold text-gray-900 mb-2">{currentWord.word}</p>
-              <p className="text-lg text-gray-500">{currentWord.transcription}</p>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="mt-2 text-blue-600 hover:bg-blue-50 rounded-full mx-auto"
-                onClick={() => playAudio(currentWord.word)}
-              >
-                <Volume2 className="size-6" />
-              </Button>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {[currentWord.translation[language], ...allWords
-                .filter(w => w.id !== currentWord.id)
-                .slice(0, 3)
-                .map(w => w.translation[language])]
-                .sort(() => Math.random() - 0.5)
-                .map((translation, idx) => (
-                  <motion.button
-                    key={idx}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => handleTestAnswer(translation === currentWord.translation[language])}
-                    disabled={showAnswer}
-                    className={`p-6 rounded-xl text-lg font-medium transition-all shadow-sm ${showAnswer
-                      ? translation === currentWord.translation[language]
-                        ? 'bg-green-100 border-2 border-green-500 text-green-800'
-                        : 'bg-gray-50 text-gray-400'
-                      : 'bg-white border-2 border-gray-100 hover:border-purple-500 hover:bg-purple-50 text-gray-700'
-                      }`}
-                  >
-                    {translation}
-                    {showAnswer && translation === currentWord.translation[language] && (
-                      <CheckCircle className="inline-block ml-2 size-5 text-green-600" />
-                    )}
-                  </motion.button>
-                ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   const toggleCardFlip = (wordId: string) => {
     setFlippedCards(prev => {
@@ -303,6 +194,68 @@ export function SmartVocabulary() {
       }
       return newSet;
     });
+  };
+
+  const playAudio = (text: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    getAudioService().speak(text);
+  };
+
+  const getDistractors = (currentWord: Word) => {
+    const profile = getUserProfileService().getProfile();
+    const userLevel = profile?.level || 'A1';
+
+    let candidates = allWords.filter(w => w.id !== currentWord.id);
+
+    // Adaptive difficulty for A2 and above
+    if (userLevel !== 'A1') {
+      const sameCategory = candidates.filter(w => w.category === currentWord.category);
+      if (sameCategory.length >= 3) {
+        candidates = sameCategory;
+      } else {
+        const sameLevelOrHigher = candidates.filter(w => w.level >= currentWord.level);
+        if (sameLevelOrHigher.length >= 3) {
+          candidates = sameLevelOrHigher;
+        }
+      }
+    }
+
+    return candidates
+      .map(w => w.translation[language])
+      .sort(() => Math.random() - 0.5)
+      .slice(0, 3);
+  };
+
+  const handleTestAnswer = (correct: boolean) => {
+    setShowAnswer(true);
+    if (correct) {
+      setTestScore(prev => prev + 1);
+      playAudio(testItems[currentTestIndex].word.word);
+    }
+
+    setTimeout(() => {
+      if (currentTestIndex < testItems.length - 1) {
+        setCurrentTestIndex(prev => prev + 1);
+        setShowAnswer(false);
+      } else {
+        setTestMode(false);
+        alert(language === 'kz'
+          ? `Тест аяқталды! Нәтиже: ${testScore + (correct ? 1 : 0)}/${testItems.length}`
+          : `Тест завершен! Результат: ${testScore + (correct ? 1 : 0)}/${testItems.length}`
+        );
+
+        if (reviewMode) {
+          testItems.forEach(item => {
+            SpacedRepetitionService.updateProgress(item.word.id, true);
+          });
+          refreshDueWords();
+        }
+      }
+    }, 1500);
+  };
+
+  const handleSentenceComplete = (success: boolean) => {
+    handleTestAnswer(success);
   };
 
   const renderWordCard = (word: Word) => {
@@ -430,6 +383,96 @@ export function SmartVocabulary() {
       </motion.div>
     );
   };
+
+  if (testMode && testItems.length > 0) {
+    const currentItem = testItems[currentTestIndex];
+    const currentWord = currentItem.word;
+    const progress = ((currentTestIndex + 1) / testItems.length) * 100;
+
+    return (
+      <div className="max-w-2xl mx-auto p-6">
+        <div className="mb-6 flex items-center justify-between">
+          <Button variant="ghost" onClick={() => setTestMode(false)}>
+            <XCircle className="mr-2 size-5" />
+            {language === 'kz' ? 'Аяқтау' : 'Завершить'}
+          </Button>
+          <div className="flex items-center gap-4">
+            <span className="font-bold text-purple-600">
+              {currentTestIndex + 1} / {testItems.length}
+            </span>
+            <div className="w-32 h-2 bg-gray-200 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-purple-600 transition-all duration-300"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+          </div>
+        </div>
+
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentTestIndex}
+            initial={{ x: 20, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: -20, opacity: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            {currentItem.type === 'sentence' ? (
+              <SentenceBuilder
+                sentence={currentWord.example || ''}
+                translation={currentWord.exampleTranslation[language]}
+                onComplete={handleSentenceComplete}
+              />
+            ) : (
+              <Card className="border-0 shadow-xl bg-white/80 backdrop-blur">
+                <CardContent className="p-8 text-center">
+                  <div className="mb-8">
+                    <h2 className="text-3xl font-bold text-gray-800 mb-2">{currentWord.word}</h2>
+                    {showAnswer && (
+                      <p className="text-xl text-purple-600 font-medium">{currentWord.translation[language]}</p>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="mt-4 text-blue-600 hover:bg-blue-50 rounded-full"
+                      onClick={() => playAudio(currentWord.word)}
+                    >
+                      <Volume2 className="size-8" />
+                    </Button>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-3">
+                    {[currentWord.translation[language], ...getDistractors(currentWord)]
+                      .sort(() => Math.random() - 0.5)
+                      .map((option, idx) => (
+                        <Button
+                          key={idx}
+                          variant={showAnswer
+                            ? option === currentWord.translation[language] ? "default" : "outline"
+                            : "outline"
+                          }
+                          className={`w-full py-6 text-lg justify-start px-6 ${showAnswer && option === currentWord.translation[language]
+                            ? "bg-green-500 hover:bg-green-600 text-white border-green-500"
+                            : ""
+                            }`}
+                          onClick={() => !showAnswer && handleTestAnswer(option === currentWord.translation[language])}
+                          disabled={showAnswer}
+                        >
+                          {option}
+                          {showAnswer && option === currentWord.translation[language] && (
+                            <CheckCircle className="ml-auto size-5" />
+                          )}
+                        </Button>
+                      ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </motion.div>
+        </AnimatePresence>
+      </div>
+    );
+  }
 
   return (
     <div className="p-8 max-w-7xl mx-auto">

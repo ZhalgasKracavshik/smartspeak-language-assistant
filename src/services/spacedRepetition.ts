@@ -106,5 +106,13 @@ export const SpacedRepetitionService = {
                 nextReview: Date.now(), // Due immediately
             });
         }
+    },
+
+    updateProgress: (wordId: string, isCorrect: boolean) => {
+        const current = SpacedRepetitionService.getProgress(wordId);
+        // Quality: 5 for correct, 1 for incorrect (simplified)
+        const quality = isCorrect ? 5 : 1;
+        const updated = SpacedRepetitionService.calculateNextReview(current, quality);
+        SpacedRepetitionService.saveProgress(updated);
     }
 };

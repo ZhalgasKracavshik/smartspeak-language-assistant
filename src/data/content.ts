@@ -1,132 +1,157 @@
+export interface LyricLine {
+    startTime: number; // in seconds
+    text: string; // English text
+    translation: string; // Russian/Kazakh translation
+}
+
 export interface ContentItem {
     id: string;
     type: 'video' | 'cartoon' | 'song' | 'story' | 'tiktok';
-    title: string;
-    titleKz: string;
-    titleRu: string;
-    description: string;
-    descriptionKz: string;
-    descriptionRu: string;
+    platform?: 'youtube' | 'tiktok'; // Video platform
+    title: {
+        kz: string;
+        ru: string;
+    };
+    description: {
+        kz: string;
+        ru: string;
+    };
     thumbnail: string;
-    url: string; // YouTube ID or link
+    url: string; // YouTube ID, TikTok URL, or link
     level: 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
     duration: string;
     tags: string[];
+    lyrics?: LyricLine[]; // For songs only
 }
 
 export const contentDatabase: ContentItem[] = [
-    // Videos
-    {
-        id: 'v1',
-        type: 'video',
-        title: 'Learn English with Friends',
-        titleKz: 'Friends сериалымен ағылшын тілін үйрену',
-        titleRu: 'Учим английский с сериалом Друзья',
-        description: 'Funny scenes from the Friends TV show with subtitles and explanations.',
-        descriptionKz: 'Субтитрлар мен түсіндірмелері бар Friends телехикаясынан қызықты көріністер.',
-        descriptionRu: 'Смешные сцены из сериала Друзья с субтитрами и объяснениями.',
-        thumbnail: 'https://img.youtube.com/vi/Vw8RjYq7W3I/maxresdefault.jpg',
-        url: 'Vw8RjYq7W3I',
-        level: 'B1',
-        duration: '10:05',
-        tags: ['comedy', 'daily life', 'slang']
-    },
+    // Videos - Only embeddable content
     {
         id: 'v2',
         type: 'video',
-        title: 'TED Talk: The power of introverts',
-        titleKz: 'TED Talk: Интроверттердің күші',
-        titleRu: 'TED Talk: Сила интровертов',
-        description: 'Susan Cain argues that introverts bring extraordinary talents and abilities to the world.',
-        descriptionKz: 'Сюзан Кейн интроверттер әлемге ерекше таланттар мен қабілеттер әкеледі деп санайды.',
-        descriptionRu: 'Сьюзан Кейн утверждает, что интроверты приносят в мир необычайные таланты и способности.',
-        thumbnail: 'https://img.youtube.com/vi/c0KYU2j0TM4/maxresdefault.jpg',
-        url: 'c0KYU2j0TM4',
-        level: 'C1',
-        duration: '19:04',
-        tags: ['psychology', 'education', 'public speaking']
+        platform: 'youtube',
+        title: {
+            kz: 'English Conversation Practice',
+            ru: 'Практика разговорного английского'
+        },
+        description: {
+            kz: 'Күнделікті сөйлесу практикасы',
+            ru: 'Практика повседневного общения'
+        },
+        thumbnail: 'https://img.youtube.com/vi/8irSFvoyLHQ/maxresdefault.jpg',
+        url: '8irSFvoyLHQ',
+        level: 'A2',
+        duration: '30:00',
+        tags: ['conversation', 'daily life', 'practice']
     },
 
     // Cartoons
     {
         id: 'c1',
         type: 'cartoon',
-        title: 'Peppa Pig: The Library',
-        titleKz: 'Пеппа шошқа: Кітапхана',
-        titleRu: 'Свинка Пеппа: Библиотека',
-        description: 'Peppa and her family go to the library to return a book.',
-        descriptionKz: 'Пеппа және оның отбасы кітапты қайтару үшін кітапханаға барады.',
-        descriptionRu: 'Пеппа и ее семья идут в библиотеку, чтобы вернуть книгу.',
-        thumbnail: 'https://img.youtube.com/vi/L7FaM_GgceA/maxresdefault.jpg',
-        url: 'L7FaM_GgceA',
+        platform: 'youtube',
+        title: {
+            kz: 'English Fairy Tales',
+            ru: 'Английские сказки для детей'
+        },
+        description: {
+            kz: 'Жай английша ертегілер',
+            ru: 'Простые сказки на английском'
+        },
+        thumbnail: 'https://img.youtube.com/vi/v7sz7GNs33k/maxresdefault.jpg',
+        url: 'v7sz7GNs33k',
         level: 'A1',
-        duration: '5:00',
-        tags: ['kids', 'family', 'vocabulary']
+        duration: '10:00',
+        tags: ['kids', 'fairy tales', 'easy']
     },
 
-    // Songs
+    // Songs with Lyrics
     {
         id: 's1',
         type: 'song',
-        title: 'Ed Sheeran - Shape of You',
-        titleKz: 'Ed Sheeran - Shape of You',
-        titleRu: 'Ed Sheeran - Shape of You',
-        description: 'Learn English with lyrics from this popular song.',
-        descriptionKz: 'Осы танымал әннің мәтінімен ағылшын тілін үйреніңіз.',
-        descriptionRu: 'Учите английский с текстом этой популярной песни.',
-        thumbnail: 'https://img.youtube.com/vi/JGwWNGJdvx8/maxresdefault.jpg',
-        url: 'JGwWNGJdvx8',
+        platform: 'youtube',
+        title: {
+            kz: 'Learn English with Songs - Easy Lyrics',
+            ru: 'Учим английский с песнями - простые тексты'
+        },
+        description: {
+            kz: 'Оңай әндермен үйреніңіз',
+            ru: 'Учитесь с легкими песнями'
+        },
+        thumbnail: 'https://img.youtube.com/vi/kJQP7kiw5Fk/maxresdefault.jpg',
+        url: 'kJQP7kiw5Fk',
         level: 'A2',
-        duration: '4:23',
-        tags: ['music', 'pop', 'lyrics']
+        duration: '4:30',
+        tags: ['music', 'lyrics', 'easy'],
+        lyrics: [
+            { startTime: 5, text: "I'm walking alone", translation: "Я иду один" },
+            { startTime: 8, text: "The streets are empty", translation: "Улицы пусты" },
+            { startTime: 12, text: "The only thing I can see", translation: "Единственное, что я вижу" },
+            { startTime: 15, text: "Is my own silhouette", translation: "Это мой силуэт" },
+            { startTime: 20, text: "I'm getting stronger", translation: "Я становлюсь сильнее" },
+            { startTime: 24, text: "Step by step", translation: "Шаг за шагом" },
+            { startTime: 28, text: "I'm walking alone", translation: "Я иду один" },
+            { startTime: 32, text: "Through the darkness", translation: "Сквозь тьму" },
+            { startTime: 36, text: "Finding my way", translation: "Находя свой путь" },
+            { startTime: 40, text: "Learning every day", translation: "Учусь каждый день" }
+        ]
     },
     {
         id: 's2',
         type: 'song',
-        title: 'Adele - Hello',
-        titleKz: 'Adele - Hello',
-        titleRu: 'Adele - Hello',
-        description: 'Deep dive into the lyrics and meaning of Hello by Adele.',
-        descriptionKz: 'Adele-дің Hello әнінің мәтіні мен мағынасына терең үңілу.',
-        descriptionRu: 'Глубокое погружение в текст и смысл песни Hello от Adele.',
-        thumbnail: 'https://img.youtube.com/vi/YQHsXMglC9A/maxresdefault.jpg',
-        url: 'YQHsXMglC9A',
-        level: 'B1',
-        duration: '6:06',
-        tags: ['music', 'ballad', 'emotions']
+        platform: 'youtube',
+        title: {
+            kz: 'English Learning Songs for Kids',
+            ru: 'Песни для изучения английского'
+        },
+        description: {
+            kz: 'Балалар үшін әндер',
+            ru: 'Обучающие песни для детей'
+        },
+        thumbnail: 'https://img.youtube.com/vi/ZjBuJg2B5wk/maxresdefault.jpg',
+        url: 'ZjBuJg2B5wk',
+        level: 'A1',
+        duration: '25:00',
+        tags: ['kids', 'songs', 'educational']
     },
 
     // Stories
     {
         id: 'st1',
         type: 'story',
-        title: 'The Lion and the Mouse',
-        titleKz: 'Арыстан мен тышқан',
-        titleRu: 'Лев и мышь',
-        description: 'A classic fable about kindness and helping others.',
-        descriptionKz: 'Мейірімділік пен басқаларға көмектесу туралы классикалық мысал.',
-        descriptionRu: 'Классическая басня о доброте и помощи другим.',
-        thumbnail: 'https://img.youtube.com/vi/GxcGVCEEdcU/maxresdefault.jpg',
-        url: 'GxcGVCEEdcU',
-        level: 'A1',
-        duration: '3:00',
-        tags: ['fable', 'moral', 'reading']
+        platform: 'youtube',
+        title: {
+            kz: 'Short English Stories',
+            ru: 'Короткие английские рассказы'
+        },
+        description: {
+            kz: 'Қысқа әңгімелер оқу практикасына',
+            ru: 'Короткие рассказы для практики чтения'
+        },
+        thumbnail: 'https://img.youtube.com/vi/TsOIf-7QQA8/maxresdefault.jpg',
+        url: 'TsOIf-7QQA8',
+        level: 'A2',
+        duration: '8:00',
+        tags: ['story', 'reading', 'beginner']
     },
 
     // TikTok Style
     {
         id: 'tt1',
         type: 'tiktok',
-        title: '3 Slang Words You Need to Know',
-        titleKz: 'Сіз білуіңіз керек 3 сленг сөзі',
-        titleRu: '3 сленговых слова, которые нужно знать',
-        description: 'Quick lesson on modern English slang.',
-        descriptionKz: 'Қазіргі ағылшын сленгі бойынша қысқаша сабақ.',
-        descriptionRu: 'Быстрый урок по современному английскому сленгу.',
-        thumbnail: 'https://img.youtube.com/vi/7X8II6J-6mU/maxresdefault.jpg', // Placeholder
-        url: '7X8II6J-6mU',
-        level: 'B2',
-        duration: '0:59',
-        tags: ['slang', 'quick', 'speaking']
+        platform: 'youtube',
+        title: {
+            kz: 'Quick English Tips',
+            ru: 'Быстрые советы по английскому'
+        },
+        description: {
+            kz: 'Жылдам кеңестер мен трюктер',
+            ru: 'Быстрые советы и трюки'
+        },
+        thumbnail: 'https://img.youtube.com/vi/tC-Vgc2YaIw/maxresdefault.jpg',
+        url: 'tC-Vgc2YaIw',
+        level: 'B1',
+        duration: '10:00',
+        tags: ['tips', 'quick', 'useful']
     }
 ];

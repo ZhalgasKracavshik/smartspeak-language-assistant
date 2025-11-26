@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { motion } from 'motion/react';
-import { BookMarked, Clock, Zap, CheckCircle, ArrowRight, Play, RefreshCw, Trophy, Puzzle } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { BookMarked, Clock, Zap, CheckCircle, ArrowRight, Play, Trophy, Puzzle, Sparkles, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
@@ -9,13 +9,14 @@ import { tenses, conditionals, phrasalVerbs, irregularVerbs } from '../data/gram
 import { useLanguage } from '../contexts/LanguageContext';
 import { SentenceBuilder } from './games/SentenceBuilder';
 import { aiService } from '../services/aiService';
-import { Loader2, Sparkles } from 'lucide-react';
 import { Textarea } from './ui/textarea';
+import { getUserProfileService } from '../services/userProfileService';
 
 export function GrammarCoach() {
   const { language } = useLanguage();
   const [selectedTab, setSelectedTab] = useState('tenses');
   const [testMode, setTestMode] = useState(false);
+  const [showResults, setShowResults] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [score, setScore] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
@@ -69,7 +70,7 @@ export function GrammarCoach() {
   };
 
   const generateQuestions = (type: string) => {
-    let newQuestions = [];
+    let newQuestions: any[] = [];
     if (type === 'tenses') {
       newQuestions = tenses.map(tense => {
         const randomExample = tense.examples[Math.floor(Math.random() * tense.examples.length)];
@@ -137,6 +138,7 @@ export function GrammarCoach() {
     }
     setQuestions(newQuestions);
     setTestMode(true);
+    setShowResults(false);
     setCurrentQuestionIndex(0);
     setScore(0);
     setShowAnswer(false);
@@ -158,22 +160,36 @@ export function GrammarCoach() {
       setSelectedAnswer(null);
     } else {
       // End of test
-      // You could add a completion screen here, for now we just reset or show score
+      setShowResults(true);
+
+      // Save progress
+      const profileService = getUserProfileService();
+      const currentProfile = profileService.getProfile();
+      if (currentProfile) {
+        const newXp = (currentProfile.xp || 0) + (score * 10);
+        profileService.updateProfile({
+          xp: newXp,
+        });
+
+        // Also update global progress service
+        import('../services/progressService').then(({ addPoints, markLessonAsCompleted }) => {
+          addPoints(score * 10);
+          markLessonAsCompleted(`grammar_${selectedTab}`);
+        });
+      }
     }
   };
 
   const restartTest = () => {
     setTestMode(false);
+    setShowResults(false);
     setQuestions([]);
     setScore(0);
     setCurrentQuestionIndex(0);
   };
 
   if (testMode && questions.length > 0) {
-    const currentQuestion = questions[currentQuestionIndex];
-    const isLastQuestion = currentQuestionIndex === questions.length - 1;
-
-    if (showAnswer && isLastQuestion && selectedAnswer) {
+    if (showResults) {
       return (
         <div className="p-8 max-w-2xl mx-auto text-center">
           <motion.div
@@ -189,8 +205,11 @@ export function GrammarCoach() {
             </Button>
           </motion.div>
         </div>
-      )
+      );
     }
+
+    const currentQuestion = questions[currentQuestionIndex];
+    const isLastQuestion = currentQuestionIndex === questions.length - 1;
 
     return (
       <div className="p-8 max-w-2xl mx-auto">
@@ -229,7 +248,7 @@ export function GrammarCoach() {
                 animate={{ opacity: 1, y: 0 }}
                 className="pt-4"
               >
-                <Button onClick={isLastQuestion ? () => { } : nextQuestion} className="w-full" size="lg">
+                <Button onClick={nextQuestion} className="w-full" size="lg">
                   {isLastQuestion ? translations.finish[language] : translations.next[language]}
                 </Button>
               </motion.div>
@@ -598,7 +617,14 @@ export function GrammarCoach() {
         </TabsContent>
 
         <TabsContent value="builder">
-          <SentenceBuilder />
+          <SentenceBuilder
+            sentence="I am learning English"
+            translation={language === 'kz' ? 'Мен ағылшын тілін үйреніп жатырмын' : 'Я учу английский язык'}
+            onComplete={() => {
+              // Handle completion
+              setScore(prev => prev + 5);
+            }}
+          />
         </TabsContent>
       </Tabs>
     </div >

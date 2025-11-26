@@ -1,40 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, horizontalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Check, RefreshCw, Trophy, ArrowRight } from 'lucide-react';
+import { Check, RefreshCw, Trophy } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Card, CardContent } from '../ui/card';
 import { useLanguage } from '../../contexts/LanguageContext';
-
-// Simple sentence data
-const sentences = [
-    {
-        id: '1',
-        text: 'I am learning English every day',
-        translation: { kz: 'Мен күн сайын ағылшын тілін үйренемін', ru: 'Я учу английский каждый день' },
-        level: 'A1'
-    },
-    {
-        id: '2',
-        text: 'She likes to read books',
-        translation: { kz: 'Ол кітап оқығанды ұнатады', ru: 'Она любит читать книги' },
-        level: 'A1'
-    },
-    {
-        id: '3',
-        text: 'Where are you from',
-        translation: { kz: 'Сіз қайдансыз', ru: 'Откуда вы' },
-        level: 'A1'
-    },
-    {
-        id: '4',
-        text: 'I have been waiting for two hours',
-        translation: { kz: 'Мен екі сағат бойы күтіп тұрмын', ru: 'Я жду уже два часа' },
-        level: 'B1'
-    }
-];
 
 interface SortableWordProps {
     id: string;
@@ -70,12 +42,16 @@ function SortableWord({ id, word }: SortableWordProps) {
     );
 }
 
-export function SentenceBuilder() {
+interface SentenceBuilderProps {
+    sentence: string;
+    translation: string;
+    onComplete: (success: boolean) => void;
+}
+
+export function SentenceBuilder({ sentence, translation, onComplete }: SentenceBuilderProps) {
     const { language } = useLanguage();
-    const [currentSentenceIndex, setCurrentSentenceIndex] = useState(0);
     const [items, setItems] = useState<{ id: string, word: string }[]>([]);
     const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
-    const [score, setScore] = useState(0);
 
     const sensors = useSensors(
         useSensor(PointerSensor),
@@ -85,18 +61,18 @@ export function SentenceBuilder() {
     );
 
     useEffect(() => {
-        loadSentence(currentSentenceIndex);
-    }, [currentSentenceIndex]);
+        if (sentence) {
+            loadSentence();
+        }
+    }, [sentence]);
 
-    const loadSentence = (index: number) => {
-        const sentence = sentences[index];
-        const words = sentence.text.split(' ');
-        // Shuffle words
+    const loadSentence = () => {
+        if (!sentence) return;
+        const words = sentence.split(' ');
         const shuffled = words.map((word, idx) => ({
-            id: `${word}-${idx}`,
+            id: `${word}-${idx}-${Math.random()}`,
             word: word
         })).sort(() => Math.random() - 0.5);
-
         setItems(shuffled);
         setIsCorrect(null);
     };
@@ -114,47 +90,33 @@ export function SentenceBuilder() {
     };
 
     const checkAnswer = () => {
-        const currentSentence = sentences[currentSentenceIndex];
         const userSentence = items.map(i => i.word).join(' ');
 
-        if (userSentence === currentSentence.text) {
+        // Simple normalization: remove extra spaces, case insensitive?
+        // Let's stick to exact match for now as it's a builder
+        if (userSentence === sentence) {
             setIsCorrect(true);
-            setScore(prev => prev + 10);
+            setTimeout(() => {
+                onComplete(true);
+            }, 1500);
         } else {
             setIsCorrect(false);
         }
     };
 
-    const nextSentence = () => {
-        if (currentSentenceIndex < sentences.length - 1) {
-            setCurrentSentenceIndex(prev => prev + 1);
-        } else {
-            // Game Over / Reset
-            alert(language === 'kz' ? `Ойын аяқталды! Ұпай: ${score}` : `Игра окончена! Счет: ${score}`);
-            setCurrentSentenceIndex(0);
-            setScore(0);
-        }
-    };
-
-    const currentSentence = sentences[currentSentenceIndex];
-
     return (
-        <div className="max-w-3xl mx-auto p-6">
+        <div className="w-full max-w-3xl mx-auto">
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="text-center mb-8"
+                className="text-center mb-6"
             >
                 <div className="inline-flex items-center justify-center p-3 bg-blue-100 rounded-full mb-4">
-                    <Trophy className="size-8 text-blue-600" />
+                    <Trophy className="size-6 text-blue-600" />
                 </div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">Sentence Builder</h2>
-                <p className="text-gray-600">
-                    {language === 'kz' ? 'Сөздерді дұрыс ретпен орналастырыңыз' : 'Расставьте слова в правильном порядке'}
-                </p>
-                <div className="mt-4 inline-block bg-yellow-100 px-4 py-1 rounded-full text-yellow-700 font-bold">
-                    Score: {score}
-                </div>
+                <h2 className="text-xl font-bold text-gray-900 mb-2">
+                    {language === 'kz' ? 'Сөйлем құрастырыңыз' : 'Составьте предложение'}
+                </h2>
             </motion.div>
 
             <Card className={`border-0 shadow-xl transition-colors duration-500 ${isCorrect === true ? 'bg-green-50' :
@@ -162,7 +124,7 @@ export function SentenceBuilder() {
                 }`}>
                 <CardContent className="p-8">
                     <p className="text-center text-gray-500 mb-8 text-lg italic">
-                        "{currentSentence.translation[language]}"
+                        "{translation}"
                     </p>
 
                     <DndContext
@@ -194,7 +156,7 @@ export function SentenceBuilder() {
 
                         {isCorrect === false && (
                             <Button
-                                onClick={() => loadSentence(currentSentenceIndex)}
+                                onClick={loadSentence}
                                 variant="outline"
                                 className="text-red-600 border-red-200 hover:bg-red-50"
                             >
@@ -207,19 +169,10 @@ export function SentenceBuilder() {
                             <motion.div
                                 initial={{ scale: 0 }}
                                 animate={{ scale: 1 }}
-                                className="flex gap-4"
+                                className="flex items-center text-green-600 font-bold"
                             >
-                                <div className="flex items-center text-green-600 font-bold mr-4">
-                                    <Check className="size-6 mr-2" />
-                                    {language === 'kz' ? 'Дұрыс!' : 'Правильно!'}
-                                </div>
-                                <Button
-                                    onClick={nextSentence}
-                                    className="bg-green-600 hover:bg-green-700"
-                                >
-                                    {language === 'kz' ? 'Келесі' : 'Следующий'}
-                                    <ArrowRight className="size-4 ml-2" />
-                                </Button>
+                                <Check className="size-6 mr-2" />
+                                {language === 'kz' ? 'Дұрыс!' : 'Правильно!'}
                             </motion.div>
                         )}
                     </div>
