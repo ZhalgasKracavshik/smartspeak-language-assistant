@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Sidebar } from '../components/Sidebar';
 import { Dashboard } from '../components/Dashboard';
 import { VoicePractice } from '../components/VoicePractice';
@@ -20,6 +21,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { Onboarding } from '../components/Onboarding';
 
 function AppContent() {
+    const router = useRouter();
     const [activeTab, setActiveTab] = useState('dashboard');
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [showOnboarding, setShowOnboarding] = useState(false);
@@ -89,16 +91,10 @@ function AppContent() {
             case 'content':
                 return <ContentHub />;
             case 'games':
-                if (typeof window !== 'undefined') {
-                    window.location.href = '/games';
-                }
+                router.push('/games');
                 return null;
-            case 'classes':
-                return <Classes />;
             case 'terms':
-                if (typeof window !== 'undefined') {
-                    window.location.href = '/terms';
-                }
+                router.push('/terms');
                 return null;
             case 'settings':
                 return <Settings onLogout={handleLogout} />;

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { uploadToCloudinary } from '@/services/cloudinary';
+import { uploadToCloudinary } from '@/services/uploadService';
 import '../styles/admin.css';
 
 interface MediaForm {

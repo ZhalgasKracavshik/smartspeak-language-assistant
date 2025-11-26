@@ -20,6 +20,7 @@ export interface UploadResult {
     duration?: number;
     format: string;
     resource_type: string;
+    thumbnail_url: string;
 }
 
 /**
@@ -47,6 +48,10 @@ export async function uploadVideo(
             duration: result.duration,
             format: result.format,
             resource_type: result.resource_type,
+            thumbnail_url: cloudinary.url(result.public_id, {
+                resource_type: 'video',
+                format: 'jpg'
+            }),
         };
     } catch (error) {
         console.error('Error uploading video to Cloudinary:', error);
@@ -73,11 +78,57 @@ export async function uploadAudio(
             duration: result.duration,
             format: result.format,
             resource_type: result.resource_type,
+            thumbnail_url: '', // Audio doesn't have a thumbnail by default
         };
     } catch (error) {
         console.error('Error uploading audio to Cloudinary:', error);
         throw new Error('Failed to upload audio');
     }
+}
+
+/**
+ * Upload file buffer to Cloudinary (for API routes)
+ */
+export async function uploadBuffer(
+    buffer: Buffer,
+    type: 'video' | 'audio',
+    folder: string = 'smartspeak/uploads'
+): Promise<UploadResult> {
+    return new Promise((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+            {
+                resource_type: 'video', // Audio is also video in Cloudinary
+                folder: folder,
+                chunk_size: 6000000,
+                eager: type === 'video' ? [
+                    { width: 640, height: 360, crop: 'limit', format: 'mp4' },
+                ] : undefined,
+                eager_async: true,
+            },
+            (error, result) => {
+                if (error) return reject(error);
+                if (!result) return reject(new Error('No result from Cloudinary'));
+
+                resolve({
+                    public_id: result.public_id,
+                    secure_url: result.secure_url,
+                    duration: result.duration,
+                    format: result.format,
+                    resource_type: result.resource_type,
+                    thumbnail_url: cloudinary.url(result.public_id, {
+                        resource_type: 'video',
+                        format: 'jpg'
+                    }),
+                });
+            }
+        );
+
+        // Write buffer to stream
+        const stream = require('stream');
+        const bufferStream = new stream.PassThrough();
+        bufferStream.end(buffer);
+        bufferStream.pipe(uploadStream);
+    });
 }
 
 /**
