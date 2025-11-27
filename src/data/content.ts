@@ -148,7 +148,7 @@ export const contentDatabase: ContentItem[] = [
             kz: 'Жылдам кеңестер мен трюктер',
             ru: 'Быстрые советы и трюки'
         },
-        thumbnail: 'https://img.youtube.com/vi/tC-Vgc2YaIw/hqdefault.jpg',
+        thumbnail: 'https://img.youtube.com/vi/tC-Vgc2YaIw/sddefault.jpg',
         url: 'tC-Vgc2YaIw',
         level: 'B1',
         duration: '10:00',
