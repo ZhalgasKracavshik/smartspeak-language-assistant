@@ -26,19 +26,11 @@ export function useSubtitleGeneration() {
 
             const data = await response.json();
 
-            // Map the response to match the Media Subtitle interface
-            const mappedSubtitles: Subtitle[] = data.subtitles.map((sub: any) => ({
-                id: sub.id || Math.random().toString(36).substr(2, 9),
-                media_id: 'generated', // Placeholder
-                start_time: sub.startTime,
-                end_time: sub.endTime,
-                text_en: sub.text,
-                text_ru: sub.translation?.ru,
-                words: []
-            }));
+            // API now returns the correct structure matching Subtitle interface
+            const generatedSubtitles: Subtitle[] = data.subtitles;
 
-            setSubtitles(mappedSubtitles);
-            return mappedSubtitles;
+            setSubtitles(generatedSubtitles);
+            return generatedSubtitles;
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Unknown error';
             setError(errorMessage);

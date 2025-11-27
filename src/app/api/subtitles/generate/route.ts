@@ -24,24 +24,28 @@ export async function POST(request: NextRequest) {
         const prompt = `
 Analyze this video and transcribe the spoken content.
 Provide timestamps for each sentence or phrase.
+Also provide a Russian translation for each subtitle.
 
 Return the result as a JSON array with this exact structure:
 [
   {
-    "startTime": 0.0,
-    "endTime": 3.5,
-    "text": "Hello, welcome to our lesson"
+    "start_time": 0.0,
+    "end_time": 3.5,
+    "text_en": "Hello, welcome to our lesson",
+    "text_ru": "Привет, добро пожаловать на наш урок"
   },
   {
-    "startTime": 3.5,
-    "endTime": 7.2,
-    "text": "Today we will learn about present simple tense"
+    "start_time": 3.5,
+    "end_time": 7.2,
+    "text_en": "Today we will learn about present simple tense",
+    "text_ru": "Сегодня мы узнаем о настоящем простом времени"
   }
 ]
 
 Important:
-- startTime and endTime should be in seconds (decimals allowed)
-- text should be the exact spoken words
+- start_time and end_time should be in seconds (decimals allowed)
+- text_en should be the exact spoken words
+- text_ru should be the Russian translation
 - Return ONLY the JSON array, no markdown, no explanation
 `;
 
@@ -72,16 +76,19 @@ Important:
         // Форматируем в нужную структуру
         const subtitles = parsedSubtitles.map((sub: any, index: number) => ({
             id: `subtitle-${index}`,
-            startTime: parseFloat(sub.startTime),
-            endTime: parseFloat(sub.endTime),
-            text: sub.text.trim(),
+            media_id: 'generated',
+            start_time: parseFloat(sub.start_time || sub.startTime),
+            end_time: parseFloat(sub.end_time || sub.endTime),
+            text_en: (sub.text_en || sub.text || '').trim(),
+            text_ru: (sub.text_ru || sub.translation || '').trim(),
+            words: [] // Gemini 2.0 Flash doesn't support word-level timestamps easily yet
         }));
 
         console.log(`Generated ${subtitles.length} subtitles`);
 
         return NextResponse.json({
             subtitles,
-            duration: subtitles[subtitles.length - 1]?.endTime || 0,
+            duration: subtitles[subtitles.length - 1]?.end_time || 0,
             language
         });
 
