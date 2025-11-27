@@ -28,13 +28,29 @@ export async function POST(request: NextRequest) {
         const audioBlob = await audioResponse.blob();
         console.log('Audio downloaded, size:', audioBlob.size, 'bytes');
 
-        // Step 2: Transcribe using Whisper via Hugging Face
+        // Step 2: Transcribe using Whisper via Hugging Face Inference API
         console.log('Transcribing with Whisper...');
-        const transcriptionResult = await hf.automaticSpeechRecognition({
-            model: 'openai/whisper-large-v3',
-            data: audioBlob,
-        });
 
+        // Use direct HTTP request for better compatibility
+        const hfResponse = await fetch(
+            'https://api-inference.huggingface.co/models/openai/whisper-large-v3',
+            {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${process.env.HUGGINGFACE_API_KEY}`,
+                    'Content-Type': 'application/octet-stream',
+                },
+                body: audioBlob,
+            }
+        );
+
+        if (!hfResponse.ok) {
+            const errorText = await hfResponse.text();
+            console.error('HF API Error:', errorText);
+            throw new Error(`Hugging Face API error: ${errorText}`);
+        }
+
+        const transcriptionResult = await hfResponse.json();
         console.log('Whisper transcription result:', transcriptionResult);
 
         // Whisper returns: { text: "full transcription" }
