@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Subtitle } from '@/types/subtitle';
+import { Subtitle } from '@/types/media';
 
 export function useSubtitleGeneration() {
     const [subtitles, setSubtitles] = useState<Subtitle[]>([]);
@@ -25,8 +25,20 @@ export function useSubtitleGeneration() {
             }
 
             const data = await response.json();
-            setSubtitles(data.subtitles);
-            return data.subtitles;
+
+            // Map the response to match the Media Subtitle interface
+            const mappedSubtitles: Subtitle[] = data.subtitles.map((sub: any) => ({
+                id: sub.id || Math.random().toString(36).substr(2, 9),
+                media_id: 'generated', // Placeholder
+                start_time: sub.startTime,
+                end_time: sub.endTime,
+                text_en: sub.text,
+                text_ru: sub.translation?.ru,
+                words: []
+            }));
+
+            setSubtitles(mappedSubtitles);
+            return mappedSubtitles;
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Unknown error';
             setError(errorMessage);

@@ -83,6 +83,10 @@ export async function GET(
 
         // Fetch media content
         const { data: mediaData, error: mediaError } = await supabase
+            .from('media_content')
+            .select('*')
+            .eq('id', id)
+            .single();
 
         // Fetch subtitles
         const { data: subtitlesData, error: subtitlesError } = await supabase
