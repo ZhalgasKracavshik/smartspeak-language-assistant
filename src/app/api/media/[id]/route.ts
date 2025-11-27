@@ -38,47 +38,18 @@ export async function GET(
                 category: 'documentaries',
                 cloudinary_id: 'owF7GeWfRIuIRoGg1AjALFQ3g9GjAySkfOeZWW_p27noc',
                 cloudinary_url: 'https://res.cloudinary.com/dvn30df1m/video/upload/v1764189249/owF7GeWfRIuIRoGg1AjALFQ3g9GjAySkfOeZWW_p27noc.mp4',
-                thumbnail_url: 'https://res.cloudinary.com/dvn30df1m/video/upload/v1764189249/owF7GeWfRIuIRoGg1AjALFQ3g9GjAySkfOeZWW_p27noc.jpg',
-                duration: 57,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-                view_count: 100,
-                subtitles: [
-                    {
-                        id: '1',
-                        media_id: '123e4567-e89b-12d3-a456-426614174000',
-                        start_time: 0,
-                        end_time: 5,
-                        text_en: "Welcome to this English lesson.",
-                        text_ru: "Добро пожаловать на этот урок английского.",
-                        words: []
-                    },
-                    {
-                        id: '2',
-                        media_id: '123e4567-e89b-12d3-a456-426614174000',
-                        start_time: 5,
-                        end_time: 10,
-                        text_en: "Today we will learn about AI technology.",
-                        text_ru: "Сегодня мы узнаем о технологии ИИ.",
-                        words: []
-                    }
-                ]
-            };
-            return NextResponse.json(demoVideo);
-        }
+                // Fetch media content
+                const { data: mediaData, error: mediaError } = await supabase
+                    .from('media_content')
+                    .select('*')
+                    .eq('id', id)
+                    .single();
 
-        // Fetch media content
-        const { data: mediaData, error: mediaError } = await supabase
-            .from('media_content')
-            .select('*')
-            .eq('id', id)
-            .single();
-
-        if (mediaError || !mediaData) {
-            return NextResponse.json(
-                { error: 'Media not found' },
-                { status: 404 }
-            );
+                if(mediaError || !mediaData) {
+                    return NextResponse.json(
+                        { error: 'Media not found' },
+                        { status: 404 }
+                    );
         }
 
         // Fetch subtitles
