@@ -1,8 +1,7 @@
 'use client';
 
 import React, { useRef, useEffect, useState } from 'react';
-import { MediaType } from '@/types/media';
-import { Subtitle } from '@/types/subtitle';
+import { MediaType, Subtitle } from '@/types/media';
 import '../components/Improvements.css';
 import '../styles/subtitles.css';
 
@@ -40,7 +39,7 @@ export function CloudinaryPlayer({
             // Find current subtitle
             if (subtitles.length > 0) {
                 const current = subtitles.find(
-                    sub => currentTime >= sub.startTime && currentTime <= sub.endTime
+                    sub => currentTime >= sub.start_time && currentTime <= sub.end_time
                 );
                 setCurrentSubtitle(current || null);
             }
