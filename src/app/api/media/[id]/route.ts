@@ -43,40 +43,7 @@ export async function GET(
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
                 view_count: 100,
-                subtitles: [
-                    {
-                        id: '1',
-                        media_id: '123e4567-e89b-12d3-a456-426614174000',
-                        start_time: 0,
-                        end_time: 5,
-                        text_en: "Welcome to this English lesson.",
-                        text_ru: "Добро пожаловать на этот урок английского.",
-                        words: [
-                            { word: "Welcome", start: 0, end: 1, translation: "Добро пожаловать" },
-                            { word: "to", start: 1, end: 1.5, translation: "на" },
-                            { word: "this", start: 1.5, end: 2, translation: "этот" },
-                            { word: "English", start: 2, end: 3.5, translation: "английский" },
-                            { word: "lesson", start: 3.5, end: 5, translation: "урок" }
-                        ]
-                    },
-                    {
-                        id: '2',
-                        media_id: '123e4567-e89b-12d3-a456-426614174000',
-                        start_time: 5,
-                        end_time: 10,
-                        text_en: "Today we will learn about AI technology.",
-                        text_ru: "Сегодня мы узнаем о технологии ИИ.",
-                        words: [
-                            { word: "Today", start: 5, end: 6, translation: "Сегодня" },
-                            { word: "we", start: 6, end: 6.5, translation: "мы" },
-                            { word: "will", start: 6.5, end: 7, translation: "будем" },
-                            { word: "learn", start: 7, end: 8, translation: "изучать" },
-                            { word: "about", start: 8, end: 8.5, translation: "про" },
-                            { word: "AI", start: 8.5, end: 9, translation: "ИИ" },
-                            { word: "technology", start: 9, end: 10, translation: "технологию" }
-                        ]
-                    }
-                ]
+                subtitles: []
             };
             return NextResponse.json(demoVideo);
         }
