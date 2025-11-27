@@ -86,10 +86,11 @@ export class AudioService {
      */
     async startListening(): Promise<{ transcript: string; confidence: number }> {
         return new Promise((resolve, reject) => {
+            // Check for browser support including iOS/Safari
             const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
             if (!SpeechRecognition) {
-                reject(new Error('Speech recognition not supported'));
+                reject(new Error('Ваш браузер не поддерживает распознавание речи. Попробуйте Chrome или Safari.'));
                 return;
             }
 
@@ -120,6 +121,7 @@ export class AudioService {
                             confidence: 0.9
                         });
                     } else {
+                        // Don't treat empty result as error immediately, user might have just stopped speaking
                         reject(new Error('Речь не распознана. Попробуйте еще раз.'));
                     }
                 }
@@ -128,15 +130,18 @@ export class AudioService {
             recognition.onerror = (event: any) => {
                 if (!hasResolved) {
                     hasResolved = true;
+                    console.error('Speech recognition error:', event.error);
 
                     if (event.error === 'no-speech') {
                         reject(new Error('Речь не обнаружена. Говорите громче.'));
                     } else if (event.error === 'audio-capture') {
-                        reject(new Error('Микрофон не найден.'));
+                        reject(new Error('Микрофон не найден. Проверьте подключение.'));
                     } else if (event.error === 'not-allowed') {
-                        reject(new Error('Доступ к микрофону запрещен.'));
+                        reject(new Error('Доступ к микрофону запрещен. Пожалуйста, разрешите доступ в настройках браузера.'));
+                    } else if (event.error === 'service-not-allowed') {
+                        reject(new Error('Сервис распознавания речи недоступен.'));
                     } else {
-                        reject(new Error(`Ошибка: ${event.error}`));
+                        reject(new Error(`Ошибка распознавания: ${event.error}`));
                     }
                 }
             };
@@ -144,7 +149,8 @@ export class AudioService {
             try {
                 recognition.start();
             } catch (error) {
-                reject(error);
+                console.error('Failed to start recognition:', error);
+                reject(new Error('Не удалось запустить микрофон. Обновите страницу.'));
             }
         });
     }

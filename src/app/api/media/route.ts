@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
         // If database is empty, return demo video
         if (!data || data.length === 0) {
             const demoVideo: MediaContent = {
-                id: 'demo-video-1',
+                id: '123e4567-e89b-12d3-a456-426614174000',
                 title: 'English Lesson with AI Subtitles',
                 description: 'Learn English with automatically generated subtitles powered by AI. Click to watch and generate subtitles!',
                 type: 'video',

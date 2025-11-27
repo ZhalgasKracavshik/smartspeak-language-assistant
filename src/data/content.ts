@@ -38,7 +38,7 @@ export const contentDatabase: ContentItem[] = [
             kz: 'Күнделікті сөйлесу практикасы',
             ru: 'Практика повседневного общения'
         },
-        thumbnail: 'https://img.youtube.com/vi/8irSFvoyLHQ/maxresdefault.jpg',
+        thumbnail: 'https://img.youtube.com/vi/8irSFvoyLHQ/hqdefault.jpg',
         url: '8irSFvoyLHQ',
         level: 'A2',
         duration: '30:00',
@@ -58,7 +58,7 @@ export const contentDatabase: ContentItem[] = [
             kz: 'Жай английша ертегілер',
             ru: 'Простые сказки на английском'
         },
-        thumbnail: 'https://img.youtube.com/vi/v7sz7GNs33k/maxresdefault.jpg',
+        thumbnail: 'https://img.youtube.com/vi/v7sz7GNs33k/hqdefault.jpg',
         url: 'v7sz7GNs33k',
         level: 'A1',
         duration: '10:00',
@@ -78,7 +78,7 @@ export const contentDatabase: ContentItem[] = [
             kz: 'Оңай әндермен үйреніңіз',
             ru: 'Учитесь с легкими песнями'
         },
-        thumbnail: 'https://img.youtube.com/vi/kJQP7kiw5Fk/maxresdefault.jpg',
+        thumbnail: 'https://img.youtube.com/vi/kJQP7kiw5Fk/hqdefault.jpg',
         url: 'kJQP7kiw5Fk',
         level: 'A2',
         duration: '4:30',
@@ -108,7 +108,7 @@ export const contentDatabase: ContentItem[] = [
             kz: 'Балалар үшін әндер',
             ru: 'Обучающие песни для детей'
         },
-        thumbnail: 'https://img.youtube.com/vi/ZjBuJg2B5wk/maxresdefault.jpg',
+        thumbnail: 'https://img.youtube.com/vi/ZjBuJg2B5wk/hqdefault.jpg',
         url: 'ZjBuJg2B5wk',
         level: 'A1',
         duration: '25:00',
@@ -128,7 +128,7 @@ export const contentDatabase: ContentItem[] = [
             kz: 'Қысқа әңгімелер оқу практикасына',
             ru: 'Короткие рассказы для практики чтения'
         },
-        thumbnail: 'https://img.youtube.com/vi/TsOIf-7QQA8/maxresdefault.jpg',
+        thumbnail: 'https://img.youtube.com/vi/TsOIf-7QQA8/hqdefault.jpg',
         url: 'TsOIf-7QQA8',
         level: 'A2',
         duration: '8:00',
@@ -148,7 +148,7 @@ export const contentDatabase: ContentItem[] = [
             kz: 'Жылдам кеңестер мен трюктер',
             ru: 'Быстрые советы и трюки'
         },
-        thumbnail: 'https://img.youtube.com/vi/tC-Vgc2YaIw/maxresdefault.jpg',
+        thumbnail: 'https://img.youtube.com/vi/tC-Vgc2YaIw/hqdefault.jpg',
         url: 'tC-Vgc2YaIw',
         level: 'B1',
         duration: '10:00',
