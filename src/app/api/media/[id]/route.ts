@@ -27,6 +27,30 @@ export async function GET(
             );
         }
 
+        // Check for demo video ID
+        if (id === '123e4567-e89b-12d3-a456-426614174000') {
+            const demoVideo: MediaWithSubtitles = {
+                id: '123e4567-e89b-12d3-a456-426614174000',
+                title: 'English Lesson with AI Subtitles',
+                description: 'Learn English with automatically generated subtitles powered by AI.',
+                type: 'video',
+                difficulty: 'intermediate',
+                category: 'documentaries',
+                cloudinary_id: 'owF7GeWfRIuIRoGg1AjALFQ3g9GjAySkfOeZWW_p27noc',
+                cloudinary_url: 'https://res.cloudinary.com/dvn30df1m/video/upload/v1764189249/owF7GeWfRIuIRoGg1AjALFQ3g9GjAySkfOeZWW_p27noc.mp4',
+                thumbnail_url: 'https://res.cloudinary.com/dvn30df1m/video/upload/v1764189249/owF7GeWfRIuIRoGg1AjALFQ3g9GjAySkfOeZWW_p27noc.jpg',
+                duration: 120,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+                view_count: 100,
+                subtitles: [
+                    { id: '1', media_id: '123e4567-e89b-12d3-a456-426614174000', start_time: 0, end_time: 5, text_en: "Welcome to this English lesson.", words: [] },
+                    { id: '2', media_id: '123e4567-e89b-12d3-a456-426614174000', start_time: 5, end_time: 10, text_en: "Today we will learn about AI technology.", words: [] }
+                ]
+            };
+            return NextResponse.json(demoVideo);
+        }
+
         // Fetch media content
         const { data: mediaData, error: mediaError } = await supabase
             .from('media_content')

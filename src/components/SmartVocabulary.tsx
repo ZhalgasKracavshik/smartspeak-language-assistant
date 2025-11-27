@@ -274,7 +274,7 @@ export function SmartVocabulary() {
           >
             {/* Front */}
             <div className="absolute w-full h-full backface-hidden">
-              <Card className="h-full border-2 border-transparent hover:border-purple-200 transition-all shadow-md hover:shadow-xl bg-white">
+              <Card className="h-full border-2 border-transparent hover:border-purple-200 transition-all shadow-md hover:shadow-xl bg-white dark:bg-gray-800 dark:border-gray-700">
                 <CardContent className="flex flex-col items-center justify-center h-full p-6 text-center relative">
                   <div className="absolute top-4 right-4">
                     <Button
@@ -286,7 +286,7 @@ export function SmartVocabulary() {
                       <Star className={`size-5 ${savedWords.has(word.id) ? 'fill-current' : ''}`} />
                     </Button>
                   </div>
-                  <h3 className="text-2xl font-bold text-gray-800 mb-2">{word.word}</h3>
+                  <h3 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">{word.word}</h3>
                   <p className="text-gray-500 mb-4">{word.transcription}</p>
                   <Button
                     variant="ghost"
@@ -304,8 +304,8 @@ export function SmartVocabulary() {
             </div>
 
             {/* Back */}
-            <div className="absolute w-full h-full backface-hidden rotate-y-180">
-              <Card className="h-full bg-gradient-to-br from-purple-50 to-white border-2 border-purple-100 shadow-md">
+            <div className="absolute w-full h-full backface-hidden rotate-y-180" style={{ transform: 'rotateY(180deg)' }}>
+              <Card className="h-full bg-gradient-to-br from-purple-50 to-white dark:from-gray-800 dark:to-gray-900 border-2 border-purple-100 dark:border-gray-700 shadow-md">
                 <CardContent className="flex flex-col items-center justify-center h-full p-6 text-center relative">
                   <div className="absolute top-4 right-4">
                     <Button
@@ -317,9 +317,9 @@ export function SmartVocabulary() {
                       <Star className={`size-5 ${savedWords.has(word.id) ? 'fill-current' : ''}`} />
                     </Button>
                   </div>
-                  <h3 className="text-2xl font-bold text-purple-700 mb-2">{word.translation[language]}</h3>
-                  <p className="text-gray-600 italic mb-4">"{word.exampleTranslation[language]}"</p>
-                  <div className="mt-2 px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
+                  <h3 className="text-2xl font-bold text-purple-700 dark:text-purple-400 mb-2">{word.translation[language]}</h3>
+                  <p className="text-gray-600 dark:text-gray-300 italic mb-4">"{word.exampleTranslation[language]}"</p>
+                  <div className="mt-2 px-3 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full text-xs font-medium">
                     {word.category}
                   </div>
                 </CardContent>
@@ -339,11 +339,11 @@ export function SmartVocabulary() {
         exit={{ opacity: 0, scale: 0.9 }}
         className="group"
       >
-        <Card className="border-0 shadow-sm hover:shadow-md transition-all duration-300 bg-white overflow-hidden">
+        <Card className="border-0 shadow-sm hover:shadow-md transition-all duration-300 bg-white dark:bg-gray-800 overflow-hidden">
           <CardContent className="p-4">
             <div className="flex justify-between items-start mb-2">
               <div>
-                <h3 className="text-lg font-bold text-gray-900 group-hover:text-purple-600 transition-colors">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white group-hover:text-purple-600 transition-colors">
                   {word.word}
                 </h3>
                 <p className="text-sm text-gray-500">{word.transcription}</p>
@@ -359,7 +359,7 @@ export function SmartVocabulary() {
             </div>
 
             <div className="mb-3">
-              <p className="text-gray-800 font-medium">{word.translation[language]}</p>
+              <p className="text-gray-800 dark:text-gray-200 font-medium">{word.translation[language]}</p>
             </div>
 
             <div className="flex items-center justify-between mt-4">
@@ -424,10 +424,10 @@ export function SmartVocabulary() {
                 onComplete={handleSentenceComplete}
               />
             ) : (
-              <Card className="border-0 shadow-xl bg-white/80 backdrop-blur">
+              <Card className="border-0 shadow-xl bg-white/80 dark:bg-gray-800/80 backdrop-blur">
                 <CardContent className="p-8 text-center">
                   <div className="mb-8">
-                    <h2 className="text-3xl font-bold text-gray-800 mb-2">{currentWord.word}</h2>
+                    <h2 className="text-3xl font-bold text-gray-800 dark:text-white mb-2">{currentWord.word}</h2>
                     {showAnswer && (
                       <p className="text-xl text-purple-600 font-medium">{currentWord.translation[language]}</p>
                     )}
@@ -478,10 +478,10 @@ export function SmartVocabulary() {
     <div className="p-8 max-w-7xl mx-auto">
       <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
             {language === 'kz' ? 'Smart Сөздік' : 'Smart Словарь'}
           </h1>
-          <p className="text-gray-600">
+          <p className="text-gray-600 dark:text-gray-400">
             {language === 'kz'
               ? 'Жаңа сөздерді үйреніңіз және қайталаңыз'
               : 'Изучайте новые слова и повторяйте пройденные'}
@@ -498,49 +498,49 @@ export function SmartVocabulary() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
-        <Card className="border-0 shadow-lg bg-white/80 backdrop-blur">
+        <Card className="border-0 shadow-lg bg-white/80 dark:bg-gray-800/80 backdrop-blur">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">{language === 'kz' ? 'Барлық сөздер' : 'Все слова'}</p>
-                <p className="text-2xl font-bold text-blue-600">{allWords.length}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{language === 'kz' ? 'Барлық сөздер' : 'Все слова'}</p>
+                <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{allWords.length}</p>
               </div>
-              <div className="bg-blue-100 p-3 rounded-xl">
+              <div className="bg-blue-100 dark:bg-blue-900/30 p-3 rounded-xl">
                 <BookOpen className="size-6 text-blue-600" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-lg bg-white/80 backdrop-blur">
+        <Card className="border-0 shadow-lg bg-white/80 dark:bg-gray-800/80 backdrop-blur">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">{language === 'kz' ? 'Сақталған' : 'Сохраненные'}</p>
-                <p className="text-2xl font-bold text-purple-600">{savedWords.size}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{language === 'kz' ? 'Сақталған' : 'Сохраненные'}</p>
+                <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{savedWords.size}</p>
               </div>
-              <div className="bg-purple-100 p-3 rounded-xl">
+              <div className="bg-purple-100 dark:bg-purple-900/30 p-3 rounded-xl">
                 <Star className="size-6 text-purple-600" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-lg bg-white/80 backdrop-blur">
+        <Card className="border-0 shadow-lg bg-white/80 dark:bg-gray-800/80 backdrop-blur">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">{language === 'kz' ? 'Қайталауға' : 'На повторение'}</p>
-                <p className="text-2xl font-bold text-orange-600">{dueWords.length}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{language === 'kz' ? 'Қайталауға' : 'На повторение'}</p>
+                <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">{dueWords.length}</p>
               </div>
-              <div className="bg-orange-100 p-3 rounded-xl">
+              <div className="bg-orange-100 dark:bg-orange-900/30 p-3 rounded-xl">
                 <Clock className="size-6 text-orange-600" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-lg bg-white/80 backdrop-blur">
+        <Card className="border-0 shadow-lg bg-white/80 dark:bg-gray-800/80 backdrop-blur">
           <CardContent className="p-6">
             <div className="flex flex-col gap-2">
               <Button
@@ -564,7 +564,7 @@ export function SmartVocabulary() {
         </Card>
       </div>
 
-      <Card className="border-0 shadow-xl bg-white/80 backdrop-blur mb-6">
+      <Card className="border-0 shadow-xl bg-white/80 dark:bg-gray-800/80 backdrop-blur mb-6">
         <CardContent className="p-6">
           <div className="flex flex-col md:flex-row gap-4 items-center">
             <div className="flex-1 relative w-full">
@@ -573,13 +573,13 @@ export function SmartVocabulary() {
                 placeholder={language === 'kz' ? "Сөз іздеу..." : "Поиск слов..."}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="pl-10 bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600"
               />
             </div>
-            <div className="flex-1 overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0 md:pb-0 scrollbar-hide">
+            <div className="flex-1 overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0 md:pb-0 scrollbar-hide max-w-[calc(100vw-4rem)] md:max-w-none">
               <div className="flex gap-2">
                 <div className="flex items-center gap-2 pr-4 border-r border-gray-200 mr-2">
-                  <span className="text-sm font-medium text-gray-500 whitespace-nowrap">
+                  <span className="text-sm font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap">
                     {language === 'kz' ? 'Деңгей:' : 'Уровень:'}
                   </span>
                   {levels.map(level => (
@@ -588,7 +588,7 @@ export function SmartVocabulary() {
                       onClick={() => setSelectedLevel(level)}
                       className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap ${selectedLevel === level
                         ? 'bg-blue-600 text-white shadow-md'
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                         }`}
                     >
                       {level === 'all' ? (language === 'kz' ? 'Барлығы' : 'Все') : level}
@@ -597,7 +597,7 @@ export function SmartVocabulary() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-gray-500 whitespace-nowrap">
+                  <span className="text-sm font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap">
                     {language === 'kz' ? 'Категория:' : 'Категория:'}
                   </span>
                   {categories.map((cat: string) => (
@@ -606,7 +606,7 @@ export function SmartVocabulary() {
                       onClick={() => setSelectedCategory(cat)}
                       className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap ${selectedCategory === cat
                         ? 'bg-purple-600 text-white shadow-md'
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                         }`}
                     >
                       {cat === 'all' ? (language === 'kz' ? 'Барлығы' : 'Все') : cat}
@@ -616,16 +616,16 @@ export function SmartVocabulary() {
               </div>
             </div>
 
-            <div className="flex bg-gray-100 p-1 rounded-lg shrink-0">
+            <div className="flex bg-gray-100 dark:bg-gray-700 p-1 rounded-lg shrink-0">
               <button
                 onClick={() => setViewMode('list')}
-                className={`p-2 rounded-md transition-all ${viewMode === 'list' ? 'bg-white shadow text-blue-600' : 'text-gray-500'}`}
+                className={`p-2 rounded-md transition-all ${viewMode === 'list' ? 'bg-white dark:bg-gray-600 shadow text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}
               >
                 <Filter className="size-5" />
               </button>
               <button
                 onClick={() => setViewMode('flashcards')}
-                className={`p-2 rounded-md transition-all ${viewMode === 'flashcards' ? 'bg-white shadow text-blue-600' : 'text-gray-500'}`}
+                className={`p-2 rounded-md transition-all ${viewMode === 'flashcards' ? 'bg-white dark:bg-gray-600 shadow text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}
               >
                 <BookOpen className="size-5" />
               </button>
