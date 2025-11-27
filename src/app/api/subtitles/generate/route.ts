@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { HfInference } from '@huggingface/inference';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
+const hf = new HfInference(process.env.HUGGINGFACE_API_KEY);
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
 export async function POST(request: NextRequest) {
@@ -16,72 +18,92 @@ export async function POST(request: NextRequest) {
 
         console.log('Generating subtitles for video:', videoUrl);
 
-        // Используем Gemini 2.0 Flash (бесплатный tier)
-        const model = genAI.getGenerativeModel({
-            model: 'gemini-2.0-flash-exp'
-        });
-
-        const prompt = `
-Analyze this video and transcribe the spoken content.
-Provide timestamps for each sentence or phrase.
-Also provide a Russian translation for each subtitle.
-
-Return the result as a JSON array with this exact structure:
-[
-  {
-    "start_time": 0.0,
-    "end_time": 3.5,
-    "text_en": "Hello, welcome to our lesson",
-    "text_ru": "Привет, добро пожаловать на наш урок"
-  },
-  {
-    "start_time": 3.5,
-    "end_time": 7.2,
-    "text_en": "Today we will learn about present simple tense",
-    "text_ru": "Сегодня мы узнаем о настоящем простом времени"
-  }
-]
-
-Important:
-- start_time and end_time should be in seconds (decimals allowed)
-- text_en should be the exact spoken words
-- text_ru should be the Russian translation
-- Return ONLY the JSON array, no markdown, no explanation
-`;
-
-        // Отправляем видео URL напрямую в Gemini
-        const result = await model.generateContent([
-            {
-                fileData: {
-                    fileUri: videoUrl,
-                    mimeType: 'video/mp4'
-                }
-            },
-            prompt
-        ]);
-
-        const response = await result.response;
-        const text = response.text();
-
-        console.log('Gemini response:', text);
-
-        // Извлекаем JSON из ответа
-        const jsonMatch = text.match(/\[[\s\S]*\]/);
-        if (!jsonMatch) {
-            throw new Error('Could not parse subtitles from AI response');
+        // Step 1: Download the audio from the video URL
+        console.log('Downloading audio from:', videoUrl);
+        const audioResponse = await fetch(videoUrl);
+        if (!audioResponse.ok) {
+            throw new Error('Failed to download video/audio');
         }
 
-        const parsedSubtitles = JSON.parse(jsonMatch[0]);
+        const audioBlob = await audioResponse.blob();
+        console.log('Audio downloaded, size:', audioBlob.size, 'bytes');
 
-        // Форматируем в нужную структуру
-        const subtitles = parsedSubtitles.map((sub: any, index: number) => ({
+        // Step 2: Transcribe using Whisper via Hugging Face
+        console.log('Transcribing with Whisper...');
+        const transcriptionResult = await hf.automaticSpeechRecognition({
+            model: 'openai/whisper-large-v3',
+            data: audioBlob,
+        });
+
+        console.log('Whisper transcription result:', transcriptionResult);
+
+        // Whisper returns: { text: "full transcription" }
+        // We need to chunk it into sentences with timestamps
+        const fullTranscript = transcriptionResult.text;
+
+        if (!fullTranscript || fullTranscript.trim().length === 0) {
+            throw new Error('No speech detected in audio');
+        }
+
+        // Step 3: Split transcript into sentences (basic approach)
+        // Note: Whisper API doesn't always return word-level timestamps in free tier
+        // So we'll estimate timestamps based on sentence length
+        const sentences = fullTranscript
+            .split(/[.!?]+/)
+            .map(s => s.trim())
+            .filter(s => s.length > 0);
+
+        console.log(`Split into ${sentences.length} sentences`);
+
+        // Estimate duration (you might want to get actual duration from video metadata)
+        // For now, assume average speaking rate: ~150 words per minute
+        const totalWords = fullTranscript.split(/\s+/).length;
+        const estimatedDuration = (totalWords / 150) * 60; // seconds
+
+        // Step 4: Create timestamped segments
+        let currentTime = 0;
+        const segmentDuration = estimatedDuration / sentences.length;
+
+        const englishSegments = sentences.map((sentence, index) => {
+            const segment = {
+                text_en: sentence,
+                start_time: parseFloat(currentTime.toFixed(2)),
+                end_time: parseFloat((currentTime + segmentDuration).toFixed(2))
+            };
+            currentTime += segmentDuration;
+            return segment;
+        });
+
+        // Step 5: Translate to Russian using Gemini
+        console.log('Translating to Russian with Gemini...');
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
+
+        const translationPrompt = `Translate the following English sentences to Russian. Return ONLY a JSON array of translations in the same order, no markdown:
+        
+${sentences.map((s, i) => `${i + 1}. ${s}`).join('\n')}
+
+Return format: ["translation 1", "translation 2", ...]`;
+
+        const translationResult = await model.generateContent(translationPrompt);
+        const translationText = translationResult.response.text();
+
+        // Extract JSON array from response
+        const jsonMatch = translationText.match(/\[[\s\S]*\]/);
+        if (!jsonMatch) {
+            throw new Error('Failed to parse translations from Gemini');
+        }
+
+        const translations: string[] = JSON.parse(jsonMatch[0]);
+
+        // Step 6: Combine English and Russian
+        const subtitles = englishSegments.map((segment, index) => ({
             id: `subtitle-${index}`,
             media_id: 'generated',
-            start_time: parseFloat(sub.start_time || sub.startTime),
-            end_time: parseFloat(sub.end_time || sub.endTime),
-            text_en: (sub.text_en || sub.text || '').trim(),
-            text_ru: (sub.text_ru || sub.translation || '').trim(),
-            words: [] // Gemini 2.0 Flash doesn't support word-level timestamps easily yet
+            start_time: segment.start_time,
+            end_time: segment.end_time,
+            text_en: segment.text_en,
+            text_ru: translations[index] || '',
+            words: [] // Word-level timestamps not available in free tier
         }));
 
         console.log(`Generated ${subtitles.length} subtitles`);
