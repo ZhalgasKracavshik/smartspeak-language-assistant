@@ -274,7 +274,7 @@ export function SmartVocabulary() {
           >
             {/* Front */}
             <div className="absolute w-full h-full backface-hidden">
-              <Card className="h-full border-2 border-transparent hover:border-purple-200 transition-all shadow-md hover:shadow-xl bg-white dark:bg-gray-800 dark:border-gray-700">
+              <Card className="h-full border-2 border-transparent hover:border-purple-200 transition-all shadow-md hover:shadow-xl bg-white dark:bg-slate-800 dark:border-slate-700">
                 <CardContent className="flex flex-col items-center justify-center h-full p-6 text-center relative">
                   <div className="absolute top-4 right-4">
                     <Button
@@ -304,8 +304,8 @@ export function SmartVocabulary() {
             </div>
 
             {/* Back */}
-            <div className="absolute w-full h-full backface-hidden rotate-y-180" style={{ transform: 'rotateY(180deg)' }}>
-              <Card className="h-full bg-gradient-to-br from-purple-50 to-white dark:from-gray-800 dark:to-gray-900 border-2 border-purple-100 dark:border-gray-700 shadow-md">
+            <div className="absolute w-full h-full backface-hidden rotate-y-180">
+              <Card className="h-full bg-gradient-to-br from-purple-50 to-white dark:from-slate-800 dark:to-slate-900 border-2 border-purple-100 dark:border-slate-700 shadow-md">
                 <CardContent className="flex flex-col items-center justify-center h-full p-6 text-center relative">
                   <div className="absolute top-4 right-4">
                     <Button
@@ -339,7 +339,7 @@ export function SmartVocabulary() {
         exit={{ opacity: 0, scale: 0.9 }}
         className="group"
       >
-        <Card className="border-0 shadow-sm hover:shadow-md transition-all duration-300 bg-white dark:bg-gray-800 overflow-hidden">
+        <Card className="border-0 shadow-sm hover:shadow-md transition-all duration-300 bg-white dark:bg-slate-800 overflow-hidden">
           <CardContent className="p-4">
             <div className="flex justify-between items-start mb-2">
               <div>
@@ -498,7 +498,7 @@ export function SmartVocabulary() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
-        <Card className="border-0 shadow-lg bg-white/80 dark:bg-gray-800/80 backdrop-blur">
+        <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-800/80 backdrop-blur">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -512,7 +512,7 @@ export function SmartVocabulary() {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-lg bg-white/80 dark:bg-gray-800/80 backdrop-blur">
+        <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-800/80 backdrop-blur">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -526,7 +526,7 @@ export function SmartVocabulary() {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-lg bg-white/80 dark:bg-gray-800/80 backdrop-blur">
+        <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-800/80 backdrop-blur">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -540,7 +540,7 @@ export function SmartVocabulary() {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-lg bg-white/80 dark:bg-gray-800/80 backdrop-blur">
+        <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-800/80 backdrop-blur">
           <CardContent className="p-6">
             <div className="flex flex-col gap-2">
               <Button
@@ -564,7 +564,7 @@ export function SmartVocabulary() {
         </Card>
       </div>
 
-      <Card className="border-0 shadow-xl bg-white/80 dark:bg-gray-800/80 backdrop-blur mb-6">
+      <Card className="border-0 shadow-xl bg-white/80 dark:bg-slate-800/80 backdrop-blur mb-6">
         <CardContent className="p-6">
           <div className="flex flex-col md:flex-row gap-4 items-center">
             <div className="flex-1 relative w-full">
@@ -573,7 +573,7 @@ export function SmartVocabulary() {
                 placeholder={language === 'kz' ? "Сөз іздеу..." : "Поиск слов..."}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600"
+                className="pl-10 bg-white dark:bg-slate-700 border-gray-200 dark:border-slate-600"
               />
             </div>
             <div className="flex-1 overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0 md:pb-0 scrollbar-hide max-w-[calc(100vw-4rem)] md:max-w-none">
@@ -588,7 +588,7 @@ export function SmartVocabulary() {
                       onClick={() => setSelectedLevel(level)}
                       className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap ${selectedLevel === level
                         ? 'bg-blue-600 text-white shadow-md'
-                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                        : 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600'
                         }`}
                     >
                       {level === 'all' ? (language === 'kz' ? 'Барлығы' : 'Все') : level}
@@ -606,7 +606,7 @@ export function SmartVocabulary() {
                       onClick={() => setSelectedCategory(cat)}
                       className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap ${selectedCategory === cat
                         ? 'bg-purple-600 text-white shadow-md'
-                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                        : 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600'
                         }`}
                     >
                       {cat === 'all' ? (language === 'kz' ? 'Барлығы' : 'Все') : cat}
@@ -616,16 +616,16 @@ export function SmartVocabulary() {
               </div>
             </div>
 
-            <div className="flex bg-gray-100 dark:bg-gray-700 p-1 rounded-lg shrink-0">
+            <div className="flex bg-gray-100 dark:bg-slate-700 p-1 rounded-lg shrink-0">
               <button
                 onClick={() => setViewMode('list')}
-                className={`p-2 rounded-md transition-all ${viewMode === 'list' ? 'bg-white dark:bg-gray-600 shadow text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}
+                className={`p-2 rounded-md transition-all ${viewMode === 'list' ? 'bg-white dark:bg-slate-600 shadow text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}
               >
                 <Filter className="size-5" />
               </button>
               <button
                 onClick={() => setViewMode('flashcards')}
-                className={`p-2 rounded-md transition-all ${viewMode === 'flashcards' ? 'bg-white dark:bg-gray-600 shadow text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}
+                className={`p-2 rounded-md transition-all ${viewMode === 'flashcards' ? 'bg-white dark:bg-slate-600 shadow text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}
               >
                 <BookOpen className="size-5" />
               </button>

@@ -85,10 +85,10 @@ export function CloudinaryPlayer({
                     {/* Subtitle Overlay */}
                     {showSubtitles && currentSubtitle && (
                         <div className="video-subtitle-overlay">
-                            <span className="subtitle-text">{currentSubtitle.text}</span>
-                            {currentSubtitle.translation?.ru && (
+                            <span className="subtitle-text">{currentSubtitle.text_en}</span>
+                            {currentSubtitle.text_ru && (
                                 <span className="subtitle-translation">
-                                    {currentSubtitle.translation.ru}
+                                    {currentSubtitle.text_ru}
                                 </span>
                             )}
                         </div>
