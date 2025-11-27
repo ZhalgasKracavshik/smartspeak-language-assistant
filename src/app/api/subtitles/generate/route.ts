@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
 
         // Use direct HTTP request for better compatibility
         const hfResponse = await fetch(
-            'https://api-inference.huggingface.co/models/openai/whisper-large-v3',
+            'https://router.huggingface.co/models/openai/whisper-large-v3',
             {
                 method: 'POST',
                 headers: {
