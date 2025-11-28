@@ -1,12 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { HfInference } from '@huggingface/inference';
+import { createClient as createDeepgram } from '@deepgram/sdk';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-
-const hf = new HfInference(process.env.HUGGINGFACE_API_KEY);
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+import { createClient } from '@supabase/supabase-js';
 
 export async function POST(request: NextRequest) {
     try {
+        // Initialize clients (lazy initialization to avoid build errors)
+        const deepgram = createDeepgram(process.env.DEEPGRAM_API_KEY || '');
+        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+        const supabase = createClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+        );
+
         const { videoUrl, language = 'en' } = await request.json();
 
         if (!videoUrl) {
@@ -18,7 +24,25 @@ export async function POST(request: NextRequest) {
 
         console.log('Generating subtitles for video:', videoUrl);
 
-        // Step 1: Download the audio from the video URL
+        // Step 1: Check cache first
+        console.log('Checking subtitle cache...');
+        const { data: cachedData } = await supabase
+            .from('subtitle_cache')
+            .select('*')
+            .eq('video_url', videoUrl)
+            .single();
+
+        if (cachedData) {
+            console.log('✅ Found cached subtitles!');
+            return NextResponse.json({
+                subtitles: cachedData.subtitles,
+                duration: cachedData.duration,
+                language,
+                cached: true
+            });
+        }
+
+        // Step 2: Download audio
         console.log('Downloading audio from:', videoUrl);
         const audioResponse = await fetch(videoUrl);
         if (!audioResponse.ok) {
@@ -26,74 +50,83 @@ export async function POST(request: NextRequest) {
         }
 
         const audioBlob = await audioResponse.blob();
-        console.log('Audio downloaded, size:', audioBlob.size, 'bytes');
+        const audioBuffer = Buffer.from(await audioBlob.arrayBuffer());
+        console.log('Audio downloaded, size:', audioBuffer.length, 'bytes');
 
-        // Step 2: Transcribe using Whisper via Hugging Face Inference API
-        console.log('Transcribing with Whisper...');
-
-        // Use direct HTTP request for better compatibility
-        const hfResponse = await fetch(
-            'https://router.huggingface.co/models/openai/whisper-large-v3',
+        // Step 3: Transcribe with Deepgram
+        console.log('Transcribing with Deepgram...');
+        const { result, error } = await deepgram.listen.prerecorded.transcribeFile(
+            audioBuffer,
             {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${process.env.HUGGINGFACE_API_KEY}`,
-                    'Content-Type': 'application/octet-stream',
-                },
-                body: audioBlob,
+                model: 'nova-2',
+                smart_format: true,
+                punctuate: true,
+                paragraphs: true,
+                utterances: true,
+                language: 'en'
             }
         );
 
-        if (!hfResponse.ok) {
-            const errorText = await hfResponse.text();
-            console.error('HF API Error:', errorText);
-            throw new Error(`Hugging Face API error: ${errorText}`);
+        if (error) {
+            console.error('Deepgram error:', error);
+            throw new Error(`Deepgram transcription failed: ${error.message}`);
         }
 
-        const transcriptionResult = await hfResponse.json();
-        console.log('Whisper transcription result:', transcriptionResult);
+        if (!result?.results?.channels?.[0]?.alternatives?.[0]) {
+            throw new Error('No transcription results from Deepgram');
+        }
 
-        // Whisper returns: { text: "full transcription" }
-        // We need to chunk it into sentences with timestamps
-        const fullTranscript = transcriptionResult.text;
+        const transcript = result.results.channels[0].alternatives[0];
+        const fullText = transcript.transcript;
 
-        if (!fullTranscript || fullTranscript.trim().length === 0) {
+        if (!fullText || fullText.trim().length === 0) {
             throw new Error('No speech detected in audio');
         }
 
-        // Step 3: Split transcript into sentences (basic approach)
-        // Note: Whisper API doesn't always return word-level timestamps in free tier
-        // So we'll estimate timestamps based on sentence length
-        const sentences = fullTranscript
-            .split(/[.!?]+/)
-            .map(s => s.trim())
-            .filter(s => s.length > 0);
+        console.log('Transcription successful, length:', fullText.length);
 
-        console.log(`Split into ${sentences.length} sentences`);
+        // Step 4: Extract utterances (sentences with timestamps)
+        const utterances = result.results.utterances || [];
 
-        // Estimate duration (you might want to get actual duration from video metadata)
-        // For now, assume average speaking rate: ~150 words per minute
-        const totalWords = fullTranscript.split(/\s+/).length;
-        const estimatedDuration = (totalWords / 150) * 60; // seconds
+        let englishSegments = [];
 
-        // Step 4: Create timestamped segments
-        let currentTime = 0;
-        const segmentDuration = estimatedDuration / sentences.length;
+        if (utterances.length > 0) {
+            // Use utterances if available (best quality)
+            englishSegments = utterances.map((utt: any) => ({
+                text_en: utt.transcript,
+                start_time: utt.start,
+                end_time: utt.end
+            }));
+        } else {
+            // Fallback: split by sentences
+            const sentences = fullText
+                .split(/[.!?]+/)
+                .map(s => s.trim())
+                .filter(s => s.length > 0);
 
-        const englishSegments = sentences.map((sentence, index) => {
-            const segment = {
-                text_en: sentence,
-                start_time: parseFloat(currentTime.toFixed(2)),
-                end_time: parseFloat((currentTime + segmentDuration).toFixed(2))
-            };
-            currentTime += segmentDuration;
-            return segment;
-        });
+            const totalWords = fullText.split(/\s+/).length;
+            const estimatedDuration = (totalWords / 150) * 60;
+            const segmentDuration = estimatedDuration / sentences.length;
+
+            let currentTime = 0;
+            englishSegments = sentences.map(sentence => {
+                const segment = {
+                    text_en: sentence,
+                    start_time: parseFloat(currentTime.toFixed(2)),
+                    end_time: parseFloat((currentTime + segmentDuration).toFixed(2))
+                };
+                currentTime += segmentDuration;
+                return segment;
+            });
+        }
+
+        console.log(`Created ${englishSegments.length} segments`);
 
         // Step 5: Translate to Russian using Gemini
         console.log('Translating to Russian with Gemini...');
         const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
 
+        const sentences = englishSegments.map(s => s.text_en);
         const translationPrompt = `Translate the following English sentences to Russian. Return ONLY a JSON array of translations in the same order, no markdown:
         
 ${sentences.map((s, i) => `${i + 1}. ${s}`).join('\n')}
@@ -103,7 +136,6 @@ Return format: ["translation 1", "translation 2", ...]`;
         const translationResult = await model.generateContent(translationPrompt);
         const translationText = translationResult.response.text();
 
-        // Extract JSON array from response
         const jsonMatch = translationText.match(/\[[\s\S]*\]/);
         if (!jsonMatch) {
             throw new Error('Failed to parse translations from Gemini');
@@ -119,15 +151,29 @@ Return format: ["translation 1", "translation 2", ...]`;
             end_time: segment.end_time,
             text_en: segment.text_en,
             text_ru: translations[index] || '',
-            words: [] // Word-level timestamps not available in free tier
+            words: []
         }));
 
         console.log(`Generated ${subtitles.length} subtitles`);
 
+        const duration = subtitles[subtitles.length - 1]?.end_time || 0;
+
+        // Step 7: Save to cache
+        console.log('Saving to cache...');
+        await supabase
+            .from('subtitle_cache')
+            .upsert({
+                video_url: videoUrl,
+                subtitles: subtitles,
+                duration: duration,
+                provider: 'deepgram'
+            });
+
         return NextResponse.json({
             subtitles,
-            duration: subtitles[subtitles.length - 1]?.end_time || 0,
-            language
+            duration,
+            language,
+            cached: false
         });
 
     } catch (error) {
