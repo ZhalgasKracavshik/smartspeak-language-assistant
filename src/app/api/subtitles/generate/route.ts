@@ -140,7 +140,7 @@ export async function POST(request: NextRequest) {
 
         // Step 5: Translate to Russian using Gemini
         console.log('Translating to Russian with Gemini...');
-        const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
+        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
         const sentences = englishSegments.map(s => s.text_en);
         const translationPrompt = `Translate the following English sentences to Russian. Return ONLY a JSON array of translations in the same order, no markdown:
