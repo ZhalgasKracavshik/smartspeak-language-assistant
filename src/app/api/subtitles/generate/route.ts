@@ -7,7 +7,23 @@ export async function POST(request: NextRequest) {
     try {
         // Initialize clients (lazy initialization to avoid build errors)
         const deepgram = createDeepgram(process.env.DEEPGRAM_API_KEY || '');
-        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+
+        // Use Gemini key rotation for increased limits
+        const GEMINI_KEYS = [
+            process.env.GEMINI_API_KEY,
+            process.env.GEMINI_API_KEY_2,
+            process.env.GEMINI_API_KEY_3,
+            process.env.GEMINI_API_KEY_4,
+        ].filter(Boolean) as string[];
+
+        if (GEMINI_KEYS.length === 0) {
+            throw new Error('No Gemini API keys found');
+        }
+
+        // Round-robin rotation
+        const geminiKey = GEMINI_KEYS[Math.floor(Math.random() * GEMINI_KEYS.length)];
+        const genAI = new GoogleGenerativeAI(geminiKey);
+
         const supabase = createClient(
             process.env.NEXT_PUBLIC_SUPABASE_URL!,
             process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
