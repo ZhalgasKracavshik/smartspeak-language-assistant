@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient as createDeepgram } from '@deepgram/sdk';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { createClient } from '@supabase/supabase-js';
 
 export async function POST(request: NextRequest) {
@@ -84,24 +85,56 @@ export async function POST(request: NextRequest) {
 
         console.log('Transcription successful, length:', fullText.length);
 
-        // Step 4: Convert to subtitles format (English only for now)
+        // Step 4: Extract utterances (sentences with timestamps)
         const utterances = result.results.utterances || [];
 
-        const subtitles = utterances.map((utt: any, index: number) => ({
+        const englishSegments = utterances.map((utt: any) => ({
+            text_en: utt.transcript,
+            start_time: utt.start,
+            end_time: utt.end
+        }));
+
+        console.log(`Created ${englishSegments.length} segments`);
+
+        // Step 5: Translate to Russian using Gemini (same model as Smart Chat!)
+        console.log('Translating to Russian with Gemini...');
+
+        const GEMINI_KEYS = [
+            process.env.GEMINI_API_KEY,
+            process.env.GEMINI_API_KEY_2,
+            process.env.GEMINI_API_KEY_3,
+            process.env.GEMINI_API_KEY_4,
+        ].filter(Boolean) as string[];
+
+        const geminiKey = GEMINI_KEYS[Math.floor(Math.random() * GEMINI_KEYS.length)];
+        const genAI = new GoogleGenerativeAI(geminiKey);
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' }); // Same as Smart Chat!
+
+        const sentences = englishSegments.map(s => s.text_en);
+        const translationPrompt = `Translate these English sentences to Russian. Return ONLY a JSON array: ${JSON.stringify(sentences)}`;
+
+        const translationResult = await model.generateContent(translationPrompt);
+        const translationText = translationResult.response.text();
+
+        const jsonMatch = translationText.match(/\[[\s\S]*\]/);
+        const translations: string[] = jsonMatch ? JSON.parse(jsonMatch[0]) : [];
+
+        // Step 6: Combine English and Russian
+        const subtitles = englishSegments.map((segment, index) => ({
             id: `subtitle-${index}`,
             media_id: 'generated',
-            start_time: utt.start,
-            end_time: utt.end,
-            text_en: utt.transcript,
-            text_ru: '', // Translation temporarily disabled due to Gemini API issues
+            start_time: segment.start_time,
+            end_time: segment.end_time,
+            text_en: segment.text_en,
+            text_ru: translations[index] || '',
             words: []
         }));
 
-        console.log(`Generated ${subtitles.length} subtitles (English only)`);
+        console.log(`Generated ${subtitles.length} bilingual subtitles`);
 
         const duration = subtitles[subtitles.length - 1]?.end_time || 0;
 
-        // Step 5: Save to cache
+        // Step 7: Save to cache
         console.log('Saving to cache...');
         await supabase
             .from('subtitle_cache')
