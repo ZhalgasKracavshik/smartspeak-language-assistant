@@ -1,28 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient as createDeepgram } from '@deepgram/sdk';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import { createClient } from '@supabase/supabase-js';
 
 export async function POST(request: NextRequest) {
     try {
         // Initialize clients (lazy initialization to avoid build errors)
         const deepgram = createDeepgram(process.env.DEEPGRAM_API_KEY || '');
-
-        // Use Gemini key rotation for increased limits
-        const GEMINI_KEYS = [
-            process.env.GEMINI_API_KEY,
-            process.env.GEMINI_API_KEY_2,
-            process.env.GEMINI_API_KEY_3,
-            process.env.GEMINI_API_KEY_4,
-        ].filter(Boolean) as string[];
-
-        if (GEMINI_KEYS.length === 0) {
-            throw new Error('No Gemini API keys found');
-        }
-
-        // Round-robin rotation
-        const geminiKey = GEMINI_KEYS[Math.floor(Math.random() * GEMINI_KEYS.length)];
-        const genAI = new GoogleGenerativeAI(geminiKey);
 
         const supabase = createClient(
             process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -101,80 +84,24 @@ export async function POST(request: NextRequest) {
 
         console.log('Transcription successful, length:', fullText.length);
 
-        // Step 4: Extract utterances (sentences with timestamps)
+        // Step 4: Convert to subtitles format (English only for now)
         const utterances = result.results.utterances || [];
 
-        let englishSegments = [];
-
-        if (utterances.length > 0) {
-            // Use utterances if available (best quality)
-            englishSegments = utterances.map((utt: any) => ({
-                text_en: utt.transcript,
-                start_time: utt.start,
-                end_time: utt.end
-            }));
-        } else {
-            // Fallback: split by sentences
-            const sentences = fullText
-                .split(/[.!?]+/)
-                .map(s => s.trim())
-                .filter(s => s.length > 0);
-
-            const totalWords = fullText.split(/\s+/).length;
-            const estimatedDuration = (totalWords / 150) * 60;
-            const segmentDuration = estimatedDuration / sentences.length;
-
-            let currentTime = 0;
-            englishSegments = sentences.map(sentence => {
-                const segment = {
-                    text_en: sentence,
-                    start_time: parseFloat(currentTime.toFixed(2)),
-                    end_time: parseFloat((currentTime + segmentDuration).toFixed(2))
-                };
-                currentTime += segmentDuration;
-                return segment;
-            });
-        }
-
-        console.log(`Created ${englishSegments.length} segments`);
-
-        // Step 5: Translate to Russian using Gemini
-        console.log('Translating to Russian with Gemini...');
-        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
-
-        const sentences = englishSegments.map(s => s.text_en);
-        const translationPrompt = `Translate the following English sentences to Russian. Return ONLY a JSON array of translations in the same order, no markdown:
-        
-${sentences.map((s, i) => `${i + 1}. ${s}`).join('\n')}
-
-Return format: ["translation 1", "translation 2", ...]`;
-
-        const translationResult = await model.generateContent(translationPrompt);
-        const translationText = translationResult.response.text();
-
-        const jsonMatch = translationText.match(/\[[\s\S]*\]/);
-        if (!jsonMatch) {
-            throw new Error('Failed to parse translations from Gemini');
-        }
-
-        const translations: string[] = JSON.parse(jsonMatch[0]);
-
-        // Step 6: Combine English and Russian
-        const subtitles = englishSegments.map((segment, index) => ({
+        const subtitles = utterances.map((utt: any, index: number) => ({
             id: `subtitle-${index}`,
             media_id: 'generated',
-            start_time: segment.start_time,
-            end_time: segment.end_time,
-            text_en: segment.text_en,
-            text_ru: translations[index] || '',
+            start_time: utt.start,
+            end_time: utt.end,
+            text_en: utt.transcript,
+            text_ru: '', // Translation temporarily disabled due to Gemini API issues
             words: []
         }));
 
-        console.log(`Generated ${subtitles.length} subtitles`);
+        console.log(`Generated ${subtitles.length} subtitles (English only)`);
 
         const duration = subtitles[subtitles.length - 1]?.end_time || 0;
 
-        // Step 7: Save to cache
+        // Step 5: Save to cache
         console.log('Saving to cache...');
         await supabase
             .from('subtitle_cache')
