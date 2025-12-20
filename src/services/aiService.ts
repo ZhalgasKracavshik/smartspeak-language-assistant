@@ -1,15 +1,24 @@
+import { supabase } from '@/lib/supabase';
+
 export interface AIResponse {
     text: string;
     error?: string;
 }
 
+async function getAuthHeader() {
+    const { data: { session } } = await supabase.auth.getSession();
+    return session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {};
+}
+
 export const aiService = {
     async generateText(prompt: string): Promise<AIResponse> {
         try {
+            const authHeader = await getAuthHeader();
             const response = await fetch('/api/chat', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    ...authHeader
                 },
                 body: JSON.stringify({
                     message: prompt,
@@ -35,15 +44,18 @@ export const aiService = {
         return this.generateText(prompt);
     },
 
-    async getChatResponse(message: string, context: string = ''): Promise<AIResponse> {
+    async getChatResponse(message: string, mode: 'tutor' | 'conversation' | 'quiz' = 'tutor', context: string = ''): Promise<AIResponse> {
         try {
+            const authHeader = await getAuthHeader();
             const response = await fetch('/api/chat', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    ...authHeader
                 },
                 body: JSON.stringify({
                     message,
+                    mode,
                     history: []
                 })
             });

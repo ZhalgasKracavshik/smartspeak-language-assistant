@@ -2,7 +2,7 @@ export interface MedicalTerm {
     id: string;
     term: string;
     definition: string;
-    category: 'Anatomy' | 'Physiology' | 'Pharmacology' | 'Clinical' | 'Biology' | 'Cardiology' | 'Neurology';
+    category: 'Anatomy' | 'Physiology' | 'Pharmacology' | 'Clinical' | 'Biology' | 'Cardiology' | 'Neurology' | 'Diseases';
     latin?: string;
     example: string;
 }

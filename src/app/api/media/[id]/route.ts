@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import type { MediaWithSubtitles } from '@/types/media';
 import { validateUUID } from '@/utils/validation';
+import { requireAuth } from '@/middleware/auth';
 
 const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -19,12 +20,56 @@ export async function GET(
     try {
         const { id } = params;
 
-        // Validate UUID format
-        if (!validateUUID(id)) {
-            return NextResponse.json(
-                { error: 'Invalid media ID format' },
-                { status: 400 }
-            );
+        // Handle default content (hardcoded fallback)
+        if (id.startsWith('default-')) {
+            const defaultVideos: Record<string, MediaWithSubtitles> = {
+                'default-1': {
+                    id: 'default-1',
+                    title: 'English Listening Practice - Easy Conversation',
+                    description: 'Practice your listening skills with simple everyday conversations.',
+                    type: 'video',
+                    cloudinary_id: '',
+                    cloudinary_url: 'https://www.youtube.com/watch?v=VBu_bc40ytc',
+                    thumbnail_url: 'https://img.youtube.com/vi/VBu_bc40ytc/mqdefault.jpg',
+                    duration: 300,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString(),
+                    view_count: 50,
+                    subtitles: []
+                },
+                'default-2': {
+                    id: 'default-2',
+                    title: 'Learn English Through Story',
+                    description: 'Improve your English by listening to interesting stories.',
+                    type: 'video',
+                    cloudinary_id: '',
+                    cloudinary_url: 'https://www.youtube.com/watch?v=K3mYLJdZ39o',
+                    thumbnail_url: 'https://img.youtube.com/vi/K3mYLJdZ39o/mqdefault.jpg',
+                    duration: 450,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString(),
+                    view_count: 120,
+                    subtitles: []
+                },
+                'default-3': {
+                    id: 'default-3',
+                    title: 'English Songs for Learning',
+                    description: 'Learn English vocabulary and pronunciation through popular songs.',
+                    type: 'video',
+                    cloudinary_id: '',
+                    cloudinary_url: 'https://www.youtube.com/watch?v=ru0K8uYEZWw',
+                    thumbnail_url: 'https://img.youtube.com/vi/ru0K8uYEZWw/mqdefault.jpg',
+                    duration: 240,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString(),
+                    view_count: 200,
+                    subtitles: []
+                }
+            };
+
+            const video = defaultVideos[id];
+            if (video) return NextResponse.json(video);
+            // If default ID not found, fall through or 404
         }
 
         // Check for demo video ID
@@ -46,6 +91,14 @@ export async function GET(
                 subtitles: []
             };
             return NextResponse.json(demoVideo);
+        }
+
+        // Validate UUID format for DB lookups
+        if (!validateUUID(id)) {
+            return NextResponse.json(
+                { error: 'Invalid media ID format' },
+                { status: 400 }
+            );
         }
 
         // Fetch media content
@@ -97,6 +150,13 @@ export async function DELETE(
     { params }: { params: { id: string } }
 ) {
     try {
+        // SECURITY: Require authentication for deleting media
+        const authResult = await requireAuth(request);
+        if (authResult instanceof NextResponse) {
+            return authResult;
+        }
+        const { user } = authResult;
+
         const { id } = params;
 
         // Validate UUID format

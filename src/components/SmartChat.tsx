@@ -1,6 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Send, Bot, User, Sparkles, Loader2, RefreshCw } from 'lucide-react';
+import { Send, Bot, User, Sparkles, Loader2, RefreshCw, ChevronDown, BookOpen, MessageCircle, Trophy } from 'lucide-react';
+import { ChatSkeleton } from './skeletons/ChatSkeleton';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -24,6 +31,8 @@ export function SmartChat() {
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [isInitialLoading, setIsInitialLoading] = useState(true);
+    const [mode, setMode] = useState<'tutor' | 'conversation' | 'quiz'>('tutor');
     const scrollAreaRef = useRef<HTMLDivElement>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -48,14 +57,19 @@ export function SmartChat() {
                         content: msg.content,
                         timestamp: new Date(msg.created_at)
                     }));
-                    setMessages(supabaseMessages.length > 0 ? supabaseMessages : [{
-                        id: '1',
-                        role: 'assistant',
-                        content: language === 'kz'
-                            ? 'Сәлем! Мен SmartSpeak AI көмекшісімін. Қалай көмектесе аламын?'
-                            : 'Привет! Я AI помощник SmartSpeak. Чем могу помочь?',
-                        timestamp: new Date()
-                    }]);
+                    if (supabaseMessages.length > 0) {
+                        setMessages(supabaseMessages);
+                    } else {
+                        setMessages([{
+                            id: '1',
+                            role: 'assistant',
+                            content: language === 'kz'
+                                ? 'Сәлем! Мен SmartSpeak AI көмекшісімін. Қалай көмектесе аламын?'
+                                : 'Привет! Я AI помощник SmartSpeak. Чем могу помочь?',
+                            timestamp: new Date() // This is client-side only fetch, so Date() is safe here as it runs in useEffect
+                        }]);
+                    }
+                    setIsInitialLoading(false);
                     return;
                 }
             }
@@ -70,6 +84,7 @@ export function SmartChat() {
                         timestamp: new Date(m.timestamp)
                     }));
                     setMessages(hydrated);
+                    setIsInitialLoading(false);
                 } catch (e) {
                     console.error('Failed to parse chat history', e);
                 }
@@ -82,6 +97,7 @@ export function SmartChat() {
                         : 'Привет! Я AI помощник SmartSpeak. Чем могу помочь?',
                     timestamp: new Date()
                 }]);
+                setIsInitialLoading(false);
             }
         };
         loadMessages();
@@ -155,7 +171,7 @@ export function SmartChat() {
         setIsLoading(true);
 
         try {
-            const response = await aiService.getChatResponse(sanitizedInput);
+            const response = await aiService.getChatResponse(sanitizedInput, mode);
 
             if (response.error) {
                 const errorMessage: Message = {
@@ -211,42 +227,73 @@ export function SmartChat() {
                                 </p>
                             </div>
                         </div>
-                        <Button variant="ghost" size="icon" onClick={() => setMessages([messages[0]])}>
-                            <RefreshCw className="size-5 text-gray-500 hover:text-purple-600" />
-                        </Button>
+                        <div className="flex items-center gap-2">
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="outline" className="gap-2">
+                                        {mode === 'tutor' && <BookOpen className="size-4 text-blue-500" />}
+                                        {mode === 'conversation' && <MessageCircle className="size-4 text-green-500" />}
+                                        {mode === 'quiz' && <Trophy className="size-4 text-orange-500" />}
+                                        <span className="capitalize">{mode} Mode</span>
+                                        <ChevronDown className="size-4 text-gray-500" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={() => setMode('tutor')}>
+                                        <BookOpen className="size-4 mr-2 text-blue-500" />
+                                        Tutor
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setMode('conversation')}>
+                                        <MessageCircle className="size-4 mr-2 text-green-500" />
+                                        Conversation
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setMode('quiz')}>
+                                        <Trophy className="size-4 mr-2 text-orange-500" />
+                                        Quiz
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                            <Button variant="ghost" size="icon" onClick={() => setMessages([messages[0]])}>
+                                <RefreshCw className="size-5 text-gray-500 hover:text-purple-600" />
+                            </Button>
+                        </div>
                     </div>
                 </CardHeader>
 
                 <CardContent className="flex-1 overflow-hidden p-0 flex flex-col">
                     <div ref={scrollAreaRef} className="flex-1 overflow-y-auto p-4">
                         <div className="space-y-4">
-                            {messages.map((message) => (
-                                <motion.div
-                                    key={message.id}
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                                >
-                                    <div className={`flex gap-3 max-w-[80%] ${message.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
-                                        <Avatar className="size-8 mt-1">
-                                            <AvatarFallback className={message.role === 'user' ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600'}>
-                                                {message.role === 'user' ? <User className="size-4" /> : <Bot className="size-4" />}
-                                            </AvatarFallback>
-                                        </Avatar>
-                                        <div
-                                            className={`p-3 rounded-2xl ${message.role === 'user'
-                                                ? 'bg-blue-600 text-white rounded-tr-none'
-                                                : 'bg-gray-100 text-gray-900 rounded-tl-none'
-                                                }`}
-                                        >
-                                            <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                                            <p className={`text-[10px] mt-1 ${message.role === 'user' ? 'text-blue-200' : 'text-gray-400'}`}>
-                                                {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                            </p>
+                            {isInitialLoading ? (
+                                <ChatSkeleton />
+                            ) : (
+                                messages.map((message) => (
+                                    <motion.div
+                                        key={message.id}
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                                    >
+                                        <div className={`flex gap-3 max-w-[80%] ${message.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
+                                            <Avatar className="size-8 mt-1">
+                                                <AvatarFallback className={message.role === 'user' ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600'}>
+                                                    {message.role === 'user' ? <User className="size-4" /> : <Bot className="size-4" />}
+                                                </AvatarFallback>
+                                            </Avatar>
+                                            <div
+                                                className={`p-3 rounded-2xl ${message.role === 'user'
+                                                    ? 'bg-blue-600 text-white rounded-tr-none'
+                                                    : 'bg-gray-100 text-gray-900 rounded-tl-none'
+                                                    }`}
+                                            >
+                                                <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                                                <p className={`text-[10px] mt-1 ${message.role === 'user' ? 'text-blue-200' : 'text-gray-400'}`}>
+                                                    {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                </p>
+                                            </div>
                                         </div>
-                                    </div>
-                                </motion.div>
-                            ))}
+                                    </motion.div>
+                                ))
+                            )}
                             {isLoading && (
                                 <motion.div
                                     initial={{ opacity: 0, y: 10 }}
@@ -259,9 +306,10 @@ export function SmartChat() {
                                                 <Bot className="size-4" />
                                             </AvatarFallback>
                                         </Avatar>
-                                        <div className="bg-gray-100 p-3 rounded-2xl rounded-tl-none flex items-center gap-2">
-                                            <Loader2 className="size-4 animate-spin text-purple-600" />
-                                            <span className="text-sm text-gray-500">Thinking...</span>
+                                        <div className="bg-gray-100 p-3 rounded-2xl rounded-tl-none flex items-center gap-1">
+                                            <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                                            <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                                            <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce"></div>
                                         </div>
                                     </div>
                                 </motion.div>

@@ -1,5 +1,5 @@
-// Transcript service for fetching YouTube subtitles
 // For AI-generated transcripts, use aiTranscription.ts instead
+import { MediaType } from '@/types/media';
 
 
 export interface TranscriptSegment {
@@ -63,21 +63,18 @@ async function fetchYouTubeTranscript(videoId: string): Promise<TranscriptSegmen
 export async function fetchTranscript(
     videoId: string,
     title: string,
-    type: 'video' | 'song' | 'cartoon'
+    type: MediaType
 ): Promise<TranscriptSegment[]> {
     const cached = getCachedTranscript(videoId);
     if (cached) {
-
         return cached;
     }
 
     try {
-
         const segments = await fetchYouTubeTranscript(videoId);
         saveToCache(videoId, segments);
         return segments;
     } catch (youtubeError) {
-
         return [{
             text: type === 'song'
                 ? 'Lyrics not available. YouTube captions may be disabled for this video.'

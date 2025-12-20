@@ -13,10 +13,11 @@ import { rateLimiter } from '../services/rateLimiter';
 
 interface AuthProps {
     onLogin: () => void;
+    initialMode?: 'login' | 'signup';
 }
 
-export function Auth({ onLogin }: AuthProps) {
-    const [isLogin, setIsLogin] = useState(true);
+export function Auth({ onLogin, initialMode = 'login' }: AuthProps) {
+    const [isLogin, setIsLogin] = useState(initialMode === 'login');
     const [isForgotPassword, setIsForgotPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);

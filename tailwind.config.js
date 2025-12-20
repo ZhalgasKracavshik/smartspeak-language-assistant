@@ -7,6 +7,11 @@ module.exports = {
         './app/**/*.{ts,tsx}',
         './src/**/*.{ts,tsx}',
     ],
+    safelist: [
+        {
+            pattern: /(from|to|via)-(blue|indigo|green|emerald|teal|cyan|red|rose|purple|violet|orange|amber|pink|fuchsia|sky|slate)-(500|600)/,
+        },
+    ],
     theme: {
         container: {
             center: true,

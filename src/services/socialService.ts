@@ -28,14 +28,19 @@ class SocialService {
      * Search for users by name
      */
     async searchUsers(query: string) {
-        const { data, error } = await supabase
-            .from('profiles')
-            .select('id, full_name, level, xp, avatar_url')
-            .ilike('full_name', `%${query}%`)
-            .limit(10);
+        try {
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('id, full_name, level, xp, avatar_url')
+                .ilike('full_name', `%${query}%`)
+                .limit(10);
 
-        if (error) throw error;
-        return data;
+            if (error) throw error;
+            return data || [];
+        } catch (error) {
+            console.error('Search failed:', error);
+            return [];
+        }
     }
 
     /**
@@ -59,52 +64,67 @@ class SocialService {
     /**
      * Get friends list (accepted)
      */
-    async getFriends() {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return [];
+    async getFriends(): Promise<Friend[]> {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return [];
 
-        // Get friends where user is sender or receiver
-        const { data, error } = await supabase
-            .from('friends')
-            .select(`
-                *,
-                friend:profiles!friend_id(full_name, avatar_url, level, xp),
-                sender:profiles!user_id(full_name, avatar_url, level, xp)
-            `)
-            .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`)
-            .eq('status', 'accepted');
+            const { data, error } = await supabase
+                .from('friends')
+                .select(`
+                    *,
+                    friend:profiles!friend_id(full_name, avatar_url, level, xp),
+                    sender:profiles!user_id(full_name, avatar_url, level, xp)
+                `)
+                .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`)
+                .eq('status', 'accepted');
 
-        if (error) throw error;
+            if (error) {
+                console.error('Friends query error:', error);
+                return [];
+            }
 
-        // Map to a cleaner structure
-        return data.map(f => {
-            const isSender = f.user_id === user.id;
-            const profile = isSender ? f.friend : f.sender;
-            return {
-                ...f,
-                profile
-            };
-        });
+            // Map to a cleaner structure
+            return (data || []).map(f => {
+                const isSender = f.user_id === user.id;
+                const profile = isSender ? f.friend : f.sender;
+                return {
+                    ...f,
+                    profile
+                };
+            });
+        } catch (error) {
+            console.error('Failed to load friends:', error);
+            return [];
+        }
     }
 
     /**
      * Get pending friend requests
      */
     async getFriendRequests() {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return [];
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return [];
 
-        const { data, error } = await supabase
-            .from('friends')
-            .select(`
-                *,
-                sender:profiles!user_id(full_name, avatar_url, level, xp)
-            `)
-            .eq('friend_id', user.id)
-            .eq('status', 'pending');
+            const { data, error } = await supabase
+                .from('friends')
+                .select(`
+                    *,
+                    sender:profiles!user_id(full_name, avatar_url, level, xp)
+                `)
+                .eq('friend_id', user.id)
+                .eq('status', 'pending');
 
-        if (error) throw error;
-        return data;
+            if (error) {
+                console.error('Friend requests query error:', error);
+                return [];
+            }
+            return data || [];
+        } catch (error) {
+            console.error('Failed to load friend requests:', error);
+            return [];
+        }
     }
 
     /**
@@ -122,13 +142,48 @@ class SocialService {
     /**
      * Get leaderboard
      */
-    async getLeaderboard() {
-        const { data, error } = await supabase
-            .from('leaderboard')
-            .select('*');
+    async getLeaderboard(): Promise<LeaderboardEntry[]> {
+        try {
+            const { data, error } = await supabase
+                .from('leaderboard')
+                .select('*');
 
-        if (error) throw error;
-        return data;
+            if (error) {
+                console.error('Leaderboard query error:', error);
+                // Fallback: try to get from profiles directly
+                return this.getLeaderboardFallback();
+            }
+            return data || [];
+        } catch (error) {
+            console.error('Leaderboard error:', error);
+            return this.getLeaderboardFallback();
+        }
+    }
+
+    /**
+     * Fallback leaderboard from profiles table
+     */
+    private async getLeaderboardFallback(): Promise<LeaderboardEntry[]> {
+        try {
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('id, full_name, level, xp, avatar_url')
+                .order('xp', { ascending: false })
+                .limit(10);
+
+            if (error || !data) return [];
+
+            return data.map((profile, index) => ({
+                user_id: profile.id,
+                full_name: profile.full_name || 'Anonymous',
+                level: profile.level || 'A1',
+                xp: profile.xp || 0,
+                avatar_url: profile.avatar_url,
+                rank: index + 1
+            }));
+        } catch {
+            return [];
+        }
     }
 }
 

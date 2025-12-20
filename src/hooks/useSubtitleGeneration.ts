@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Subtitle } from '@/types/media';
+import { supabase } from '@/lib/supabase';
 
 export function useSubtitleGeneration() {
     const [subtitles, setSubtitles] = useState<Subtitle[]>([]);
@@ -13,9 +14,15 @@ export function useSubtitleGeneration() {
         setError(null);
 
         try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+
             const response = await fetch('/api/subtitles/generate', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                },
                 body: JSON.stringify({ videoUrl, language }),
             });
 

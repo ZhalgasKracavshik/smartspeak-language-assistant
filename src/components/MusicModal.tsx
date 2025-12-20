@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import { Button } from './ui/button';
 import { LyricsPlayer } from './LyricsPlayer';
-import { LyricLine } from '../data/content';
+import { LyricLine } from '@/types/media';
 
 interface MusicModalProps {
     isOpen: boolean;

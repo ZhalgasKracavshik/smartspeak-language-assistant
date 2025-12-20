@@ -14,6 +14,14 @@ interface CloudinaryPlayerProps {
     showSubtitles?: boolean;
 }
 
+// Helper to detect YouTube URLs and extract video ID
+function getYouTubeVideoId(url: string): string | null {
+    if (!url) return null;
+    const regExp = /^.*(youtu\.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
+}
+
 export function CloudinaryPlayer({
     type,
     cloudinaryUrl,
@@ -26,6 +34,9 @@ export function CloudinaryPlayer({
     const audioRef = useRef<HTMLAudioElement>(null);
     const [playbackSpeed, setPlaybackSpeed] = useState(1);
     const [currentSubtitle, setCurrentSubtitle] = useState<Subtitle | null>(null);
+
+    // Check if this is a YouTube URL
+    const youtubeVideoId = getYouTubeVideoId(cloudinaryUrl);
 
     useEffect(() => {
         const mediaElement = type === 'video' ? videoRef.current : audioRef.current;
@@ -67,6 +78,35 @@ export function CloudinaryPlayer({
     const speedOptions = [0.5, 0.75, 1, 1.25, 1.5, 2];
 
     if (type === 'video') {
+        // If it's a YouTube URL, render an iframe embed
+        if (youtubeVideoId) {
+            return (
+                <div className="lyrics-player video-container">
+                    <div style={{ position: 'relative', paddingTop: '56.25%', width: '100%' }}>
+                        <iframe
+                            style={{
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                width: '100%',
+                                height: '100%',
+                                border: 'none',
+                                borderRadius: '12px',
+                            }}
+                            src={`https://www.youtube.com/embed/${youtubeVideoId}?rel=0&modestbranding=1`}
+                            title="Video player"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                        />
+                    </div>
+                    <p style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#6b7280' }}>
+                        Note: Synced subtitles are not available for YouTube videos.
+                    </p>
+                </div>
+            );
+        }
+
+        // Standard Cloudinary video player
         return (
             <div className="lyrics-player video-container">
                 <div style={{ position: 'relative' }}>

@@ -153,40 +153,43 @@ export function Profile({ onLogout }: ProfileProps) {
 
             {activeTab === 'profile' && (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <Card className="md:col-span-2">
-                        <CardHeader><CardTitle>Personal Information</CardTitle></CardHeader>
-                        <CardContent className="space-y-6">
-                            <div className="flex items-center gap-4">
-                                <Avatar className="size-20"><AvatarFallback className="text-2xl bg-blue-100 text-blue-600">{isGuest ? 'G' : (profile?.name?.[0] || 'U')}</AvatarFallback></Avatar>
-                                <div className="flex-1">
-                                    {isEditing ? (
-                                        <div className="flex gap-2">
-                                            <Input value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Enter your name" />
-                                            <Button size="icon" onClick={handleSave}><Save className="size-4" /></Button>
-                                            <Button size="icon" variant="ghost" onClick={() => setIsEditing(false)}><X className="size-4" /></Button>
-                                        </div>
-                                    ) : (
-                                        <div className="flex items-center gap-2">
-                                            <h2 className="text-2xl font-bold">{isGuest ? 'Guest User' : (profile?.name || 'Student')}</h2>
-                                            {!isGuest && <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setIsEditing(true)}><Edit2 className="size-4 text-gray-400" /></Button>}
-                                        </div>
-                                    )}
-                                    <p className="text-gray-500">{isGuest ? 'Progress not saved' : 'English Learner'}</p>
+                    <div className="md:col-span-2 space-y-6">
+                        <Card>
+                            <CardHeader><CardTitle>Personal Information</CardTitle></CardHeader>
+                            <CardContent className="space-y-6">
+                                <div className="flex items-center gap-4">
+                                    <Avatar className="size-20"><AvatarFallback className="text-2xl bg-blue-100 text-blue-600">{isGuest ? 'G' : (profile?.name?.[0] || 'U')}</AvatarFallback></Avatar>
+                                    <div className="flex-1">
+                                        {isEditing ? (
+                                            <div className="flex gap-2">
+                                                <Input value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Enter your name" />
+                                                <Button size="icon" onClick={handleSave}><Save className="size-4" /></Button>
+                                                <Button size="icon" variant="ghost" onClick={() => setIsEditing(false)}><X className="size-4" /></Button>
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center gap-2">
+                                                <h2 className="text-2xl font-bold">{isGuest ? 'Guest User' : (profile?.name || 'Student')}</h2>
+                                                {!isGuest && <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setIsEditing(true)}><Edit2 className="size-4 text-gray-400" /></Button>}
+                                            </div>
+                                        )}
+                                        <p className="text-gray-500">{isGuest ? 'Progress not saved' : 'English Learner'}</p>
+                                    </div>
                                 </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="p-4 bg-gray-50 rounded-xl">
-                                    <p className="text-sm text-gray-500 mb-1">Current Level</p>
-                                    <p className="text-xl font-bold text-blue-600">{isGuest ? 'A1' : profile?.level}</p>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="p-4 bg-gray-50 rounded-xl">
+                                        <p className="text-sm text-gray-500 mb-1">Current Level</p>
+                                        <p className="text-xl font-bold text-blue-600">{isGuest ? 'A1' : profile?.level}</p>
+                                    </div>
+                                    <div className="p-4 bg-gray-50 rounded-xl">
+                                        <p className="text-sm text-gray-500 mb-1">Total XP</p>
+                                        <p className="text-xl font-bold text-purple-600">{currentXp}</p>
+                                    </div>
                                 </div>
-                                <div className="p-4 bg-gray-50 rounded-xl">
-                                    <p className="text-sm text-gray-500 mb-1">Total XP</p>
-                                    <p className="text-xl font-bold text-purple-600">{currentXp}</p>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                    <Card>
+                            </CardContent>
+                        </Card>
+                    </div>
+
+                    <Card className="h-fit">
                         <CardHeader><CardTitle>Statistics</CardTitle></CardHeader>
                         <CardContent className="space-y-4">
                             <div className="flex items-center gap-3 p-3 bg-orange-50 rounded-xl border border-orange-100">

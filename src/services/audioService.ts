@@ -1,21 +1,25 @@
 // Audio service using Web Speech API
 export class AudioService {
-    private synth: SpeechSynthesis;
+    private synth: SpeechSynthesis | null = null;
     private voices: SpeechSynthesisVoice[] = [];
     private currentUtterance: SpeechSynthesisUtterance | null = null;
 
     constructor() {
-        this.synth = window.speechSynthesis;
-        this.loadVoices();
+        if (typeof window !== 'undefined') {
+            this.synth = window.speechSynthesis;
+            this.loadVoices();
 
-        // Load voices when they become available
-        if (speechSynthesis.onvoiceschanged !== undefined) {
-            speechSynthesis.onvoiceschanged = () => this.loadVoices();
+            // Load voices when they become available
+            if (this.synth && this.synth.onvoiceschanged !== undefined) {
+                this.synth.onvoiceschanged = () => this.loadVoices();
+            }
         }
     }
 
     private loadVoices(): void {
-        this.voices = this.synth.getVoices();
+        if (this.synth) {
+            this.voices = this.synth.getVoices();
+        }
     }
 
     /**
@@ -23,6 +27,11 @@ export class AudioService {
      */
     speak(text: string, lang: string = 'en-US', rate: number = 0.9, pitch: number = 1): Promise<void> {
         return new Promise((resolve, reject) => {
+            if (!this.synth) {
+                resolve(); // Silently fail on server
+                return;
+            }
+
             this.stop();
 
             const utterance = new SpeechSynthesisUtterance(text);
@@ -51,14 +60,14 @@ export class AudioService {
     }
 
     stop(): void {
-        if (this.synth.speaking) {
+        if (this.synth && this.synth.speaking) {
             this.synth.cancel();
         }
         this.currentUtterance = null;
     }
 
     isSpeaking(): boolean {
-        return this.synth.speaking;
+        return this.synth ? this.synth.speaking : false;
     }
 
     getVoices(): SpeechSynthesisVoice[] {

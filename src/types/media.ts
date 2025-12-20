@@ -2,9 +2,9 @@
  * Type definitions for media content and subtitles
  */
 
-export type MediaType = 'video' | 'audio';
+export type MediaType = 'video' | 'audio' | 'song' | 'cartoon' | 'story' | 'article';
 export type DifficultyLevel = 'beginner' | 'intermediate' | 'advanced';
-export type MediaCategory = 'music' | 'movies' | 'podcasts' | 'interviews' | 'tv-shows' | 'documentaries';
+export type MediaCategory = 'music' | 'movies' | 'podcasts' | 'interviews' | 'tv-shows' | 'documentaries' | 'kids' | 'reading' | 'medical' | 'business' | 'travel' | 'technology' | 'conversation' | 'general';
 
 export interface Word {
     word: string;
@@ -58,4 +58,10 @@ export interface MediaFilters {
     difficulty?: DifficultyLevel;
     category?: MediaCategory;
     search?: string;
+}
+
+export interface LyricLine {
+    startTime: number;
+    text: string;
+    translation: string;
 }

@@ -26,13 +26,14 @@ export function VideoModal({ isOpen, onClose, videoId, title }: VideoModalProps)
     const playerRef = useRef<any>(null);
 
     const isSpotify = videoId.startsWith('spotify:');
+    const isCloudinary = videoId.includes('cloudinary.com');
 
-    // Extract clean video ID for YouTube
-    const cleanVideoId = isSpotify ? videoId : extractYouTubeId(videoId);
+    // Extract clean video ID for YouTube (only if it's actually YouTube)
+    const cleanVideoId = (!isSpotify && !isCloudinary) ? extractYouTubeId(videoId) : videoId;
 
-    // Load transcript on mount
+    // Load transcript on mount (Only for YouTube/Spotify for now)
     useEffect(() => {
-        if (!isOpen || !cleanVideoId) return;
+        if (!isOpen || !cleanVideoId || isCloudinary) return;
 
         const loadTranscript = async () => {
             setIsLoadingTranscript(true);
@@ -49,11 +50,11 @@ export function VideoModal({ isOpen, onClose, videoId, title }: VideoModalProps)
         };
 
         loadTranscript();
-    }, [isOpen, cleanVideoId, title, isSpotify]);
+    }, [isOpen, cleanVideoId, title, isSpotify, isCloudinary]);
 
     // Initialize YouTube player
     useEffect(() => {
-        if (!isOpen || isSpotify || !cleanVideoId) return;
+        if (!isOpen || isSpotify || isCloudinary || !cleanVideoId) return;
 
         // Load YouTube IFrame API
         if (!(window as any).YT) {
@@ -91,11 +92,11 @@ export function VideoModal({ isOpen, onClose, videoId, title }: VideoModalProps)
                 }
             }
         };
-    }, [isOpen, cleanVideoId, isSpotify]);
+    }, [isOpen, cleanVideoId, isSpotify, isCloudinary]);
 
     // Poll playback time for YouTube
     useEffect(() => {
-        if (!isOpen || isSpotify || !playerRef.current) return;
+        if (!isOpen || isSpotify || isCloudinary || !playerRef.current) return;
 
         const interval = setInterval(() => {
             if (playerRef.current && playerRef.current.getCurrentTime) {
@@ -109,7 +110,7 @@ export function VideoModal({ isOpen, onClose, videoId, title }: VideoModalProps)
         }, 500);
 
         return () => clearInterval(interval);
-    }, [isOpen, isSpotify]);
+    }, [isOpen, isSpotify, isCloudinary]);
 
     // Update active segment based on current time
     useEffect(() => {
@@ -180,6 +181,15 @@ export function VideoModal({ isOpen, onClose, videoId, title }: VideoModalProps)
                                 loading="lazy"
                                 className="min-h-[400px]"
                             ></iframe>
+                        ) : isCloudinary ? (
+                            <video
+                                src={videoId}
+                                controls
+                                autoPlay
+                                className="w-full h-full max-h-[600px] object-contain"
+                            >
+                                Your browser does not support the video tag.
+                            </video>
                         ) : (
                             <div id="youtube-player" className="w-full aspect-video"></div>
                         )}
@@ -209,8 +219,8 @@ export function VideoModal({ isOpen, onClose, videoId, title }: VideoModalProps)
                                             key={index}
                                             ref={index === activeSegmentIndex ? activeSegmentRef : null}
                                             className={`p-3 rounded-lg transition-all cursor-pointer ${index === activeSegmentIndex
-                                                    ? 'bg-blue-600 text-white scale-105 shadow-lg'
-                                                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                                ? 'bg-blue-600 text-white scale-105 shadow-lg'
+                                                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                                                 }`}
                                             onClick={() => {
                                                 if (playerRef.current && playerRef.current.seekTo) {

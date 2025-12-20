@@ -1,4 +1,8 @@
-import { Word } from '../data/vocabulary';
+// Basic interface for word to avoid dependency on deleted file
+interface Word {
+    id: string;
+    [key: string]: any;
+}
 
 export interface WordProgress {
     wordId: string;

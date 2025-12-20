@@ -2,9 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient as createDeepgram } from '@deepgram/sdk';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { createClient } from '@supabase/supabase-js';
+import { requireAuth } from '@/middleware/auth';
 
 export async function POST(request: NextRequest) {
     try {
+        // SECURITY: Require authentication
+        const authResult = await requireAuth(request);
+        if (authResult instanceof NextResponse) {
+            return authResult;
+        }
+        const { user } = authResult;
+
         // Initialize clients (lazy initialization to avoid build errors)
         const deepgram = createDeepgram(process.env.DEEPGRAM_API_KEY || '');
 
@@ -18,6 +26,22 @@ export async function POST(request: NextRequest) {
         if (!videoUrl) {
             return NextResponse.json(
                 { error: 'Video URL is required' },
+                { status: 400 }
+            );
+        }
+
+        // SECURITY: Validate URL format
+        try {
+            const url = new URL(videoUrl);
+            if (!['http:', 'https:'].includes(url.protocol)) {
+                return NextResponse.json(
+                    { error: 'Invalid URL protocol. Must be http or https' },
+                    { status: 400 }
+                );
+            }
+        } catch {
+            return NextResponse.json(
+                { error: 'Invalid video URL format' },
                 { status: 400 }
             );
         }

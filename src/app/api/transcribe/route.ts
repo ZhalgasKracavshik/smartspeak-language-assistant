@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateAITranscription, parseSRTFile } from '@/services/aiTranscription';
+import { requireAuth } from '@/middleware/auth';
 
 /**
  * POST /api/transcribe
@@ -7,12 +8,42 @@ import { generateAITranscription, parseSRTFile } from '@/services/aiTranscriptio
  */
 export async function POST(request: NextRequest) {
     try {
+        // SECURITY: Require authentication
+        const authResult = await requireAuth(request);
+        if (authResult instanceof NextResponse) {
+            return authResult;
+        }
+        const { user } = authResult;
+
         const { mediaUrl, duration, srtContent } = await request.json();
 
         // Validate inputs
         if (!mediaUrl || !duration) {
             return NextResponse.json(
                 { error: 'Media URL and duration are required' },
+                { status: 400 }
+            );
+        }
+
+        // SECURITY: Validate URL format
+        try {
+            const url = new URL(mediaUrl);
+            if (!['http:', 'https:'].includes(url.protocol)) {
+                return NextResponse.json(
+                    { error: 'Invalid URL protocol. Must be http or https' },
+                    { status: 400 }
+                );
+            }
+        } catch {
+            return NextResponse.json(
+                { error: 'Invalid media URL format' },
+                { status: 400 }
+            );
+        }
+
+        if (typeof duration !== 'number' || duration <= 0 || duration > 3600) {
+            return NextResponse.json(
+                { error: 'Duration must be between 0 and 3600 seconds' },
                 { status: 400 }
             );
         }

@@ -159,6 +159,25 @@ export default function NegotiatorPage() {
                     </div>
                 </div>
 
+                {/* Hint Panel */}
+                <div className="hint-panel" style={{
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    color: 'white',
+                    padding: '12px 16px',
+                    borderRadius: '12px',
+                    margin: '12px 0',
+                    fontSize: '13px',
+                    lineHeight: '1.5'
+                }}>
+                    <strong>💡 Negotiation Tips:</strong>
+                    <ul style={{ margin: '8px 0 0 20px', padding: 0 }}>
+                        <li>Start low: "How about $150?"</li>
+                        <li>Complain: "That's too expensive!"</li>
+                        <li>Walk away: "I'll look elsewhere..."</li>
+                        <li>Flatter: "You seem like a fair person"</li>
+                    </ul>
+                </div>
+
                 <div className="chat-window">
                     {messages.map((msg) => (
                         <div key={msg.id} className={`message ${msg.role}`}>

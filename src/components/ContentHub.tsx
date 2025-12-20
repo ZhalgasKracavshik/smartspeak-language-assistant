@@ -67,6 +67,10 @@ export function ContentHub() {
                             <option value="">All</option>
                             <option value="video">Videos</option>
                             <option value="audio">Audio</option>
+                            <option value="song">Songs</option>
+                            <option value="cartoon">Cartoons</option>
+                            <option value="story">Stories</option>
+                            <option value="article">Articles</option>
                         </select>
                     </div>
 
@@ -92,12 +96,20 @@ export function ContentHub() {
                             onChange={(e) => handleFilterChange('category', e.target.value)}
                         >
                             <option value="">All Categories</option>
+                            <option value="general">General</option>
                             <option value="music">Music</option>
                             <option value="movies">Movies</option>
-                            <option value="podcasts">Podcasts</option>
-                            <option value="interviews">Interviews</option>
                             <option value="tv-shows">TV Shows</option>
                             <option value="documentaries">Documentaries</option>
+                            <option value="kids">Kids</option>
+                            <option value="interviews">Interviews</option>
+                            <option value="podcasts">Podcasts</option>
+                            <option value="reading">Reading</option>
+                            <option value="conversation">Conversation</option>
+                            <option value="business">Business</option>
+                            <option value="medical">Medical</option>
+                            <option value="travel">Travel</option>
+                            <option value="technology">Technology</option>
                         </select>
                     </div>
 

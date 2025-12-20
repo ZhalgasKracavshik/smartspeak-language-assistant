@@ -57,7 +57,12 @@ export function MediaCard({ media }: MediaCardProps) {
 
                     {/* Type badge */}
                     <div className="media-card__type">
-                        {media.type === 'video' ? '📹' : '🎧'}
+                        {media.type === 'video' && '📹'}
+                        {media.type === 'audio' && '🎧'}
+                        {media.type === 'song' && '🎵'}
+                        {media.type === 'cartoon' && '🦄'}
+                        {media.type === 'story' && '📚'}
+                        {media.type === 'article' && '📄'}
                     </div>
                 </div>
 

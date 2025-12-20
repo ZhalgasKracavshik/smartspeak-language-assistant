@@ -2,7 +2,7 @@ import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { timeTrackingService } from '../services/timeTrackingService';
-import { vocabularyDatabase } from '../data/vocabulary';
+
 
 export function AnalyticsCharts() {
     const timeData = timeTrackingService.getLast7Days().map(d => ({

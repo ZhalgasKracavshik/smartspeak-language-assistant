@@ -5,13 +5,16 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { useLanguage } from '../contexts/LanguageContext';
 import { getProgress, UserProgress } from '../services/progressService';
-import { contentDatabase } from '../data/content';
+import { contentService, MediaItem } from '../services/contentService';
+// Removed static content imports
+// import { contentDatabase } from '../data/content';
 import { getUserProfileService } from '../services/userProfileService';
 import { AnalyticsCharts } from './AnalyticsCharts';
 import { timeTrackingService } from '../services/timeTrackingService';
 import { SmartChat } from './SmartChat';
 import { Profile } from './Profile';
 import { generateDailyContent } from '../services/dailyContentService';
+import DailyRecommendations from './DailyRecommendations';
 
 interface DashboardProps {
   onNavigate: (tab: string) => void;
@@ -157,8 +160,20 @@ export function Dashboard({ onNavigate, activeTab, onLogout }: DashboardProps) {
     },
   ];
 
-  // Get random recommendations
-  const recommendations = contentDatabase.sort(() => 0.5 - Math.random()).slice(0, 2);
+  // Get random recommendations from DB
+  const [recommendations, setRecommendations] = useState<MediaItem[]>([]);
+
+  useEffect(() => {
+    const fetchRecommendations = async () => {
+      // Fetch generic recommendations (randomized)
+      // Since we don't have a complicated recommendation engine yet, just get some media content
+      const content = await contentService.getMediaContent();
+      // Shuffle and take 2
+      const shuffled = content.sort(() => 0.5 - Math.random()).slice(0, 2);
+      setRecommendations(shuffled);
+    };
+    fetchRecommendations();
+  }, []);
 
   const getModuleInfo = (moduleId: string) => {
     switch (moduleId) {
@@ -269,27 +284,7 @@ export function Dashboard({ onNavigate, activeTab, onLogout }: DashboardProps) {
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.3 }}
           >
-            <h2 className="text-xl font-bold mb-4 text-gray-900">{language === 'kz' ? 'Ұсыныстар' : 'Рекомендации'}</h2>
-            <div className="space-y-4">
-              {recommendations.map((item, idx) => (
-                <Card key={idx} className="border-0 shadow-sm bg-white hover:shadow-md transition-shadow cursor-pointer" onClick={() => window.open(`https://www.youtube.com/watch?v=${item.url}`, '_blank')}>
-                  <div className="flex gap-3 p-3">
-                    <div className="relative w-24 h-16 flex-shrink-0 rounded-lg overflow-hidden">
-                      <img src={item.thumbnail} alt={item.title[language]} className="w-full h-full object-cover" />
-                      <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
-                        <Play className="size-6 text-white" />
-                      </div>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-medium text-sm text-gray-900 line-clamp-1">
-                        {item.title[language]}
-                      </h4>
-                      <p className="text-xs text-gray-500 mt-1 line-clamp-1">{item.type.toUpperCase()} • {item.level}</p>
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
+            <DailyRecommendations />
           </motion.div>
         </div>
       </div>

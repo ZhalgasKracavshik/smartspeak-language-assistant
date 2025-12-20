@@ -1,3 +1,4 @@
+'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -8,12 +9,31 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Badge } from './ui/badge';
-import { vocabularyDatabase, Word } from '../data/vocabulary';
 import { getAudioService } from '../services/audioService';
 import { SpacedRepetitionService, WordProgress } from '../services/spacedRepetition';
 import { generateTopicVocabularyAction } from '../app/actions/gemini';
 import { getUserProfileService } from '../services/userProfileService';
 import { SentenceBuilder } from './games/SentenceBuilder';
+import { InterestService, InterestTopic } from '../services/InterestService';
+import { contentService, VocabularyWord as DbWord } from '../services/contentService';
+
+// Define the interface here used by the component (matches the legacy structure)
+export interface Word {
+  id: string;
+  word: string;
+  translation: {
+    kz: string;
+    ru: string;
+  };
+  transcription?: string;
+  level: string;
+  category: string;
+  example?: string;
+  exampleTranslation: {
+    kz: string;
+    ru: string;
+  };
+}
 
 export function SmartVocabulary() {
   const { language } = useLanguage();
@@ -22,6 +42,9 @@ export function SmartVocabulary() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [savedWords, setSavedWords] = useState<Set<string>>(new Set());
   const [customWords, setCustomWords] = useState<Word[]>([]);
+  const [dbWords, setDbWords] = useState<Word[]>([]);
+  const [isLoadingDb, setIsLoadingDb] = useState(true);
+
   const [isGenerating, setIsGenerating] = useState(false);
   const [testMode, setTestMode] = useState(false);
   const [reviewMode, setReviewMode] = useState(false);
@@ -44,8 +67,44 @@ export function SmartVocabulary() {
       setCustomWords(JSON.parse(custom));
     }
 
-    refreshDueWords();
+    // Fetch from DB
+    const fetchVocab = async () => {
+      try {
+        const rawData = await contentService.getAllVocabulary();
+        // Transform DB shape to component shape
+        const transformed: Word[] = rawData.map(w => ({
+          id: w.id,
+          word: w.word,
+          translation: {
+            kz: w.translation_kz || '',
+            ru: w.translation_ru || ''
+          },
+          transcription: w.transcription || '',
+          level: w.level || 'A1',
+          category: w.category || 'General',
+          example: w.example_sentence,
+          exampleTranslation: {
+            kz: w.example_translation_kz || '',
+            ru: w.example_translation_ru || ''
+          }
+        }));
+        setDbWords(transformed);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setIsLoadingDb(false);
+      }
+    };
+    fetchVocab();
+
   }, []);
+
+  // Update due words when dbWords changes
+  useEffect(() => {
+    if (dbWords.length > 0) {
+      refreshDueWords();
+    }
+  }, [dbWords, savedWords]);
 
   // Save words to local storage
   useEffect(() => {
@@ -55,13 +114,16 @@ export function SmartVocabulary() {
   }, [savedWords, customWords]);
 
   const allWords = useMemo(() => {
-    return [...vocabularyDatabase, ...customWords];
-  }, [customWords]);
+    return [...dbWords, ...customWords];
+  }, [dbWords, customWords]);
 
   const refreshDueWords = () => {
+    // Need to wait for allWords to be populated
+    if (allWords.length === 0) return;
+
     const due = SpacedRepetitionService.getDueWords(allWords);
     const savedDue = due.filter(w => savedWords.has(w.id));
-    setDueWords(savedDue);
+    setDueWords(savedDue as Word[]);
   };
 
   const handleGenerateWords = async () => {
@@ -77,8 +139,6 @@ export function SmartVocabulary() {
       if (!topic) topic = 'general';
 
       const level = profile?.level || 'A1';
-
-
 
       const generated = await generateTopicVocabularyAction(topic, level);
 
@@ -133,7 +193,7 @@ export function SmartVocabulary() {
 
   const categories = useMemo(() => {
     const cats = new Set(allWords.map(w => w.category));
-    return ['all', ...Array.from(cats)];
+    return ['all', ...Array.from(cats)].filter(Boolean);
   }, [allWords]);
 
   const levels = ['all', 'A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
@@ -146,6 +206,22 @@ export function SmartVocabulary() {
       } else {
         newSet.add(wordId);
         SpacedRepetitionService.initializeWord(wordId);
+
+        // Track interest based on word category
+        const word = allWords.find(w => w.id === wordId);
+        if (word && word.category) {
+          // Map category to interest topic
+          let topic: InterestTopic = 'general';
+          const cat = word.category.toLowerCase();
+
+          if (cat.includes('medic') || cat.includes('health')) topic = 'medical';
+          else if (cat.includes('busin') || cat.includes('work')) topic = 'business';
+          else if (cat.includes('tech')) topic = 'technology';
+          else if (cat.includes('travel')) topic = 'travel';
+          else if (cat.includes('movie') || cat.includes('film')) topic = 'movies';
+
+          InterestService.trackAction('save_word', topic, 1, { word: word.word });
+        }
       }
       return newSet;
     });
@@ -260,6 +336,8 @@ export function SmartVocabulary() {
 
   const renderWordCard = (word: Word) => {
     const isFlipped = flippedCards.has(word.id);
+    const wordTranslation = word.translation[language] || word.translation['ru'] || word.word;
+    const exampleTranslation = word.exampleTranslation ? (word.exampleTranslation[language] || '') : '';
 
     if (viewMode === 'flashcards') {
       return (
@@ -317,8 +395,8 @@ export function SmartVocabulary() {
                       <Star className={`size-5 ${savedWords.has(word.id) ? 'fill-current' : ''}`} />
                     </Button>
                   </div>
-                  <h3 className="text-2xl font-bold text-purple-700 dark:text-purple-400 mb-2">{word.translation[language]}</h3>
-                  <p className="text-gray-600 dark:text-gray-300 italic mb-4">"{word.exampleTranslation[language]}"</p>
+                  <h3 className="text-2xl font-bold text-purple-700 dark:text-purple-400 mb-2">{wordTranslation}</h3>
+                  <p className="text-gray-600 dark:text-gray-300 italic mb-4">"{exampleTranslation}"</p>
                   <div className="mt-2 px-3 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full text-xs font-medium">
                     {word.category}
                   </div>
@@ -359,7 +437,7 @@ export function SmartVocabulary() {
             </div>
 
             <div className="mb-3">
-              <p className="text-gray-800 dark:text-gray-200 font-medium">{word.translation[language]}</p>
+              <p className="text-gray-800 dark:text-gray-200 font-medium">{wordTranslation}</p>
             </div>
 
             <div className="flex items-center justify-between mt-4">
@@ -503,7 +581,9 @@ export function SmartVocabulary() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{language === 'kz' ? 'Барлық сөздер' : 'Все слова'}</p>
-                <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{allWords.length}</p>
+                <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                  {isLoadingDb ? <Loader2 className="animate-spin inline text-sm" /> : allWords.length}
+                </p>
               </div>
               <div className="bg-blue-100 dark:bg-blue-900/30 p-3 rounded-xl">
                 <BookOpen className="size-6 text-blue-600" />
@@ -641,11 +721,18 @@ export function SmartVocabulary() {
         </TabsList>
 
         <TabsContent value="all">
-          <div className={viewMode === 'list' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" : "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"}>
-            <AnimatePresence>
-              {filteredWords.map(word => renderWordCard(word))}
-            </AnimatePresence>
-          </div>
+          {isLoadingDb ? (
+            <div className="py-20 text-center">
+              <Loader2 className="animate-spin size-10 mx-auto text-blue-500 mb-4" />
+              <p className="text-gray-500">Loading vocabulary...</p>
+            </div>
+          ) : (
+            <div className={viewMode === 'list' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" : "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"}>
+              <AnimatePresence>
+                {filteredWords.map(word => renderWordCard(word))}
+              </AnimatePresence>
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="saved">

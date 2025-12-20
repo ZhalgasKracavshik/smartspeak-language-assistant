@@ -12,8 +12,18 @@ interface LanguageContextType {
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-    const [language, setLanguageState] = useState<Language>(getCurrentLanguage());
-    const [t, setT] = useState<Translations>(getTranslations(language));
+    // Always default to 'ru' (or safe default) during SSR to prevent mismatch
+    const [language, setLanguageState] = useState<Language>('ru');
+    const [t, setT] = useState<Translations>(getTranslations('ru'));
+
+    useEffect(() => {
+        // Hydrate from localStorage on mount
+        const currentData = getCurrentLanguage();
+        if (currentData !== 'ru') {
+            setLanguageState(currentData);
+            setT(getTranslations(currentData));
+        }
+    }, []);
 
     const setLanguage = (lang: Language) => {
         setLanguageState(lang);

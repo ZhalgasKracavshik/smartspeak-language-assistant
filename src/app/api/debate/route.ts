@@ -1,8 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getGeminiModel } from '@/lib/gemini';
+import { requireAuth } from '@/middleware/auth';
 
 export async function POST(request: NextRequest) {
     try {
+        // SECURITY: Require authentication
+        const authResult = await requireAuth(request);
+        if (authResult instanceof NextResponse) {
+            return authResult;
+        }
+        const { user } = authResult;
+
         const { topic, history, userArgument } = await request.json();
 
         const model = getGeminiModel();

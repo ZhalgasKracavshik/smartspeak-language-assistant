@@ -1,7 +1,7 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { getUserProfileService } from './userProfileService';
 
-const genAI = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY || '');
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || '');
 
 interface DailyContent {
     id: string;
@@ -25,29 +25,28 @@ export async function generateDailyContent(): Promise<DailyContent[]> {
         const { level, interests } = profile;
         const interestsStr = interests.length > 0 ? interests.join(', ') : 'general English learning';
 
-        const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+        // Use the stable free model
+        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
 
-        const prompt = `You are a helpful English learning assistant. Generate 5 content recommendations for a student with:
-- English Level: ${level}
-- Interests: ${interestsStr}
+        const prompt = `You are an expert English teacher curating content. 
+        Select 3 REAL, EXISTING, and POPULAR YouTube videos for a student with:
+        - Level: ${level}
+        - Interests: ${interestsStr}
 
-For each item, provide:
-1. A YouTube video URL (real, working link)
-2. Title
-3. Short description (1-2 sentences)
-4. Type (video, song, or article)
+        Strict requirements:
+        1. Videos MUST be real and popular (TED Talks, Learn English with TV Series, BBC Learning English, etc.)
+        2. URLs must be standard YouTube links (https://www.youtube.com/watch?v=...)
+        3. Do not invent videos. If unsure, use famous educational channels.
 
-Format your response as JSON array:
-[
-  {
-    "title": "Title here",
-    "type": "video",
-    "url": "https://youtube.com/watch?v=...",
-    "description": "Description here"
-  }
-]
-
-IMPORTANT: Only return the JSON array, no additional text.`;
+        Return ONLY a raw JSON array (no markdown code blocks) with this structure:
+        [
+          {
+            "title": "Exact Title",
+            "type": "video",
+            "url": "https://www.youtube.com/watch?v=VIDEO_ID",
+            "description": "Why this matches their interest (1 sentence)"
+          }
+        ]`;
 
         const result = await model.generateContent(prompt);
         const response = await result.response;

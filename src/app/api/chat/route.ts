@@ -1,16 +1,103 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getGeminiModel } from '@/lib/gemini';
+import { requireAuth } from '@/middleware/auth';
+
+// SmartSpeak AI Teacher System Prompt
+const PROMPTS = {
+    tutor: `Ты — SmartSpeak AI Teacher, дружелюбный и опытный учитель английского языка для казахстанских школьников (5-11 классы).
+    
+    ## Твои основные задачи:
+    1. Объяснять грамматику английского языка простым и понятным языком
+    2. Помогать с переводами (английский ↔ русский ↔ казахский) and исправлять ошибки
+    3. Давать примеры использования слов и фраз
+    
+    ## Правила общения:
+    - Отвечай на том языке, на котором задан вопрос (русский, казахский или английский)
+    - Используй простые объяснения и эмодзи 😊
+    - Формат для грамматики: правило → пример → упражнение`,
+
+    conversation: `Ты — собеседник для практики английского языка. 
+    
+    ## Твоя цель:
+    Поддерживать непринужденный диалог на английском языке, как друг.
+    
+    ## Правила:
+    1. Общайся ТОЛЬКО на английском языке (если ученик не попросит перевести).
+    2. Задавай встречные вопросы, чтобы поддерживать разговор.
+    3. Используй простой, разговорный английский (A2-B1 уровень).
+    4. Исправляй ошибки МЯГКО и КРАТКО только в конце своего сообщения, не перебивая ход беседы.
+    5. Будь веселым и интересным собеседником! 😎`,
+
+    quiz: `Ты — Quiz Master, ведущий викторины по английскому языку.
+    
+    ## Твоя цель:
+    Проверить знания ученика через интересные вопросы.
+    
+    ## Алгоритм работы:
+    1. Если ученик не выбрал тему, предложи: "Grammar", "Vocabulary" или "General Knowledge".
+    2. Задай ОДИН вопрос с 3 вариантами ответа (A, B, C).
+    3. Жди ответа ученика.
+    4. Если ответ верный: Похвали и объясни, почему это правильно. Затем задай следующий вопрос.
+    5. Если ответ неверный: Объясни ошибку и дай правильный ответ. Затем задай следующий вопрос.
+    6. Используй эмодзи 🎯🏆`
+};
 
 export async function POST(request: NextRequest) {
     try {
-        const { message, history = [] } = await request.json();
+        // SECURITY: Require authentication
+        const authResult = await requireAuth(request);
+        if (authResult instanceof NextResponse) {
+            return authResult;
+        }
+        const { user } = authResult;
+
+        const { message, history = [], mode = 'tutor' } = await request.json();
+
+        // SECURITY: Validate inputs
+        if (!message || typeof message !== 'string') {
+            return NextResponse.json(
+                { error: 'Invalid message format' },
+                { status: 400 }
+            );
+        }
+
+        if (message.length === 0 || message.length > 10000) {
+            return NextResponse.json(
+                { error: 'Message must be between 1 and 10,000 characters' },
+                { status: 400 }
+            );
+        }
+
+        if (!Array.isArray(history) || history.length > 100) {
+            return NextResponse.json(
+                { error: 'Invalid history format or too many messages' },
+                { status: 400 }
+            );
+        }
 
         const model = getGeminiModel();
-        const chat = model.startChat({
-            history: history.map((msg: any) => ({
-                role: msg.role === 'user' ? 'user' : 'model',
+
+        // Select system prompt based on mode
+        const systemPrompt = PROMPTS[mode as keyof typeof PROMPTS] || PROMPTS.tutor;
+
+        // Build chat history with system prompt
+        const chatHistory = [
+            {
+                role: 'user' as const,
+                parts: [{ text: 'System Instructions:\n\n' + systemPrompt }],
+            },
+            {
+                role: 'model' as const,
+                parts: [{ text: 'Ok, I understand based on the mode: ' + mode }],
+            },
+            ...history.map((msg: any) => ({
+                role: msg.role === 'user' ? 'user' as const : 'model' as const,
                 parts: [{ text: msg.content }],
             })),
+        ];
+
+        const chat = model.startChat({
+            history: chatHistory,
         });
 
         const result = await chat.sendMessage(message);
@@ -20,11 +107,9 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ reply: text });
     } catch (error: any) {
         console.error('Chat API Error:', error);
-        console.error('Error message:', error?.message);
-        console.error('Error stack:', error?.stack);
-        return NextResponse.json(
-            { error: 'Failed to process chat message', details: error?.message },
-            { status: 500 }
-        );
+        // Return error as a chat message for debugging visibility in UI
+        return NextResponse.json({
+            reply: `⚠️ **System Error**: Failed to process message.\n\n**Error Details**: ${error?.message}\n**Model**: ${getGeminiModel().model}`
+        });
     }
 }

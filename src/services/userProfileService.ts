@@ -93,7 +93,7 @@ class UserProfileService {
             if (data) {
                 // Map Supabase data to UserProfile
                 this.profile = {
-                    level: data.level || 'A1',
+                    level: (data.level && data.level.length > 0) ? data.level : 'A1',
                     name: data.full_name,
                     interests: data.interests || [],
                     hasCompletedOnboarding: !!data.level, // Assume completed if level is set
@@ -101,8 +101,8 @@ class UserProfileService {
                     lastUpdated: data.updated_at || new Date().toISOString(),
                     xp: data.xp || 0,
                     levelNumber: Math.floor((data.xp || 0) / 100) + 1,
-                    streak: 0, // Need to store streak in DB or calculate
-                    lastLoginDate: new Date().toISOString(),
+                    streak: data.progress?.streak || 0, // Load streak from progress
+                    lastLoginDate: data.progress?.lastLoginDate || new Date().toISOString(),
                     // Merge any extra data from progress jsonb if needed
                     ...data.progress
                 };
@@ -293,7 +293,7 @@ class UserProfileService {
         if (level === 'A1' || level === 'A2') {
             return ['cartoons', 'simple-videos', 'songs'];
         } else if (level === 'B1' || level === 'B2') {
-            return ['videos', 'stories', 'music', 'tiktok'];
+            return ['videos', 'stories', 'music'];
         } else {
             return ['videos', 'movies', 'podcasts', 'articles'];
         }

@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { LanguageProvider } from '../contexts/LanguageContext';
+import { MainLayout } from '../components/MainLayout';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -17,9 +18,14 @@ export default function RootLayout({
 }) {
     return (
         <html lang="en">
+            <head>
+                <link rel="icon" href="/favicon.ico" />
+            </head>
             <body className={inter.className}>
                 <LanguageProvider>
-                    {children}
+                    <MainLayout>
+                        {children}
+                    </MainLayout>
                 </LanguageProvider>
             </body>
         </html>

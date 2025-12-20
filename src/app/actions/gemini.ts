@@ -33,7 +33,7 @@ const getNextKey = () => {
 // Helper to get a Gemini model instance with key rotation
 const getGeminiModel = () => {
     const genAI = new GoogleGenerativeAI(getNextKey());
-    return genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    return genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
 };
 
 // Updated checkRateLimit to be async and return an object for consistency

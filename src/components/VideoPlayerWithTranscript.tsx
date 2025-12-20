@@ -6,13 +6,14 @@ import { X, Loader2, Volume2, VolumeX } from 'lucide-react';
 import { Button } from './ui/button';
 import { fetchTranscript, TranscriptSegment, findActiveSegment } from '../services/transcriptService';
 import { useLanguage } from '../contexts/LanguageContext';
+import { MediaType } from '@/types/media';
 
 interface VideoPlayerWithTranscriptProps {
     isOpen: boolean;
     onClose: () => void;
     videoId: string;
     title: string;
-    type: 'video' | 'song' | 'cartoon';
+    type: MediaType;
 }
 
 export function VideoPlayerWithTranscript({

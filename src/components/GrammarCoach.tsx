@@ -71,14 +71,38 @@ export function GrammarCoach() {
 
   const generateQuestions = (type: string) => {
     let newQuestions: any[] = [];
+
+    // Helper to generate tricky wrong options
+    const generateDistractors = (correct: string, type: 'tense' | 'conditional' | 'general') => {
+      // This is a simplified logic. Ideally, we'd have manually curated wrong answers.
+      // For now, we'll try to pick answers that look similar but are wrong.
+
+      let distractors: string[] = [];
+
+      if (type === 'tense') {
+        // Try to find other tenses' examples that might be confusing
+        const otherTenses = tenses.flatMap(t => t.examples.map(e => e.en)).filter(e => e !== correct);
+        distractors = otherTenses.sort(() => 0.5 - Math.random()).slice(0, 3);
+      } else {
+        // Fallback to random
+        const pool = type === 'conditional'
+          ? conditionals.flatMap(c => c.examples.map(e => e.en))
+          : phrasalVerbs.map(p => language === 'kz' ? p.meaningKz : p.meaningRu);
+
+        distractors = pool.filter(o => o !== correct).sort(() => 0.5 - Math.random()).slice(0, 3);
+      }
+
+      return distractors;
+    };
+
     if (type === 'tenses') {
       newQuestions = tenses.map(tense => {
         const randomExample = tense.examples[Math.floor(Math.random() * tense.examples.length)];
-        const otherTenses = tenses.filter(t => t.id !== tense.id);
-        const wrongOptions = otherTenses
-          .sort(() => Math.random() - 0.5)
-          .slice(0, 3)
-          .map(t => t.examples[0].en);
+        // Generate tricky options: same sentence but different tense forms (simulated)
+        // Since we don't have a conjugator, we will pick examples from other tenses that are structurally similar if possible,
+        // or just random ones for now, but we will improve the prompt to the user.
+
+        const wrongOptions = generateDistractors(randomExample.en, 'tense');
 
         return {
           question: `${translations.translate[language]} "${randomExample[language]}"`,
@@ -89,11 +113,7 @@ export function GrammarCoach() {
     } else if (type === 'conditionals') {
       newQuestions = conditionals.map(cond => {
         const randomExample = cond.examples[Math.floor(Math.random() * cond.examples.length)];
-        const otherConds = conditionals.filter(c => c.id !== cond.id);
-        const wrongOptions = otherConds
-          .sort(() => Math.random() - 0.5)
-          .slice(0, 3)
-          .map(c => c.examples[0].en);
+        const wrongOptions = generateDistractors(randomExample.en, 'conditional');
 
         return {
           question: `${translations.translate[language]} "${randomExample[language]}"`,
@@ -106,11 +126,7 @@ export function GrammarCoach() {
         .sort(() => Math.random() - 0.5)
         .slice(0, 10)
         .map(pv => {
-          const otherPvs = phrasalVerbs.filter(p => p.id !== pv.id);
-          const wrongOptions = otherPvs
-            .sort(() => Math.random() - 0.5)
-            .slice(0, 3)
-            .map(p => language === 'kz' ? p.meaningKz : p.meaningRu);
+          const wrongOptions = generateDistractors(language === 'kz' ? pv.meaningKz : pv.meaningRu, 'general');
 
           return {
             question: `${translations.translate[language]} "${pv.verb}"`,
@@ -123,6 +139,8 @@ export function GrammarCoach() {
         .sort(() => Math.random() - 0.5)
         .slice(0, 10)
         .map(iv => {
+          // Tricky options: wrong past forms (e.g. 'goed' instead of 'went') - hard to generate without a list.
+          // Instead, we pick other verbs' past forms.
           const otherIvs = irregularVerbs.filter(v => v.id !== iv.id);
           const wrongOptions = otherIvs
             .sort(() => Math.random() - 0.5)
@@ -361,20 +379,20 @@ export function GrammarCoach() {
       </div>
 
       <Tabs value={selectedTab} onValueChange={setSelectedTab}>
-        <div className="flex justify-between items-center mb-6">
-          <TabsList className="grid w-full max-w-4xl grid-cols-6">
-            <TabsTrigger value="tenses">{translations.tenses[language]}</TabsTrigger>
-            <TabsTrigger value="conditionals">{translations.conditionals[language]}</TabsTrigger>
-            <TabsTrigger value="phrasal">{translations.phrasal[language]}</TabsTrigger>
-            <TabsTrigger value="irregular">{translations.irregular[language]}</TabsTrigger>
-            <TabsTrigger value="builder">{translations.builder[language]}</TabsTrigger>
-            <TabsTrigger value="ai" className="text-purple-600">
+        <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+          <TabsList className="flex flex-wrap h-auto gap-2 bg-transparent p-0 justify-center md:justify-start w-full">
+            <TabsTrigger value="tenses" className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-700 border border-transparent data-[state=active]:border-blue-200">{translations.tenses[language]}</TabsTrigger>
+            <TabsTrigger value="conditionals" className="data-[state=active]:bg-purple-100 data-[state=active]:text-purple-700 border border-transparent data-[state=active]:border-purple-200">{translations.conditionals[language]}</TabsTrigger>
+            <TabsTrigger value="phrasal" className="data-[state=active]:bg-green-100 data-[state=active]:text-green-700 border border-transparent data-[state=active]:border-green-200">{translations.phrasal[language]}</TabsTrigger>
+            <TabsTrigger value="irregular" className="data-[state=active]:bg-orange-100 data-[state=active]:text-orange-700 border border-transparent data-[state=active]:border-orange-200">{translations.irregular[language]}</TabsTrigger>
+            <TabsTrigger value="builder" className="data-[state=active]:bg-pink-100 data-[state=active]:text-pink-700 border border-transparent data-[state=active]:border-pink-200">{translations.builder[language]}</TabsTrigger>
+            <TabsTrigger value="ai" className="text-purple-600 data-[state=active]:bg-purple-100 border border-transparent">
               <Sparkles className="size-4 mr-2" />
               AI Coach
             </TabsTrigger>
           </TabsList>
           {selectedTab !== 'builder' && selectedTab !== 'ai' && (
-            <Button onClick={() => generateQuestions(selectedTab)} className="bg-blue-600 hover:bg-blue-700 text-white">
+            <Button onClick={() => generateQuestions(selectedTab)} className="bg-blue-600 hover:bg-blue-700 text-white w-full md:w-auto shadow-md hover:shadow-lg transition-all">
               <Play className="size-4 mr-2" />
               {translations.startTest[language]}
             </Button>

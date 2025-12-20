@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Play, Pause, Volume2, VolumeX } from 'lucide-react';
 import { Button } from './ui/button';
-import { LyricLine } from '../data/content';
+import { LyricLine } from '@/types/media';
 import { useLanguage } from '../contexts/LanguageContext';
 
 interface LyricsPlayerProps {
@@ -289,8 +289,8 @@ export function LyricsPlayer({ videoId, title, artist, thumbnail, lyrics }: Lyri
                                 transition={{ delay: index * 0.05 }}
                                 onClick={() => handleLyricClick(lyric.startTime)}
                                 className={`cursor-pointer p-4 rounded-lg transition-all duration-300 ${index === activeLyricIndex
-                                        ? 'bg-blue-600 scale-105 shadow-lg'
-                                        : 'bg-gray-800/50 hover:bg-gray-700/50'
+                                    ? 'bg-blue-600 scale-105 shadow-lg'
+                                    : 'bg-gray-800/50 hover:bg-gray-700/50'
                                     }`}
                             >
                                 <p className={`text-lg font-medium mb-2 ${index === activeLyricIndex ? 'text-white' : 'text-gray-300'
