@@ -3,6 +3,9 @@ import { supabase } from '@/lib/supabase';
 export interface AIResponse {
     text: string;
     error?: string;
+    retryAfter?: number;
+    isQuota?: boolean;
+    isRateLimit?: boolean;
 }
 
 async function getAuthHeader() {
@@ -28,7 +31,13 @@ export const aiService = {
 
             if (!response.ok) {
                 const errorData = await response.json();
-                return { text: '', error: errorData.error || 'Failed to fetch response from AI.' };
+                return {
+                    text: '',
+                    error: errorData.error || 'Failed to fetch response from AI.',
+                    retryAfter: errorData.retryAfter,
+                    isQuota: errorData.isQuota,
+                    isRateLimit: errorData.isRateLimit
+                };
             }
 
             const data = await response.json();
@@ -62,7 +71,13 @@ export const aiService = {
 
             if (!response.ok) {
                 const errorData = await response.json();
-                return { text: '', error: errorData.error || 'Failed to fetch response from AI.' };
+                return {
+                    text: '',
+                    error: errorData.error || 'Failed to fetch response from AI.',
+                    retryAfter: errorData.retryAfter,
+                    isQuota: errorData.isQuota,
+                    isRateLimit: errorData.isRateLimit
+                };
             }
 
             const data = await response.json();

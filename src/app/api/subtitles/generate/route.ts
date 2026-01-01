@@ -2,16 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient as createDeepgram } from '@deepgram/sdk';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { createClient } from '@supabase/supabase-js';
-import { requireAuth } from '@/middleware/auth';
+import { requireAuth, optionalAuth } from '../../../../middleware/auth';
 
 export async function POST(request: NextRequest) {
     try {
-        // SECURITY: Require authentication
-        const authResult = await requireAuth(request);
-        if (authResult instanceof NextResponse) {
-            return authResult;
-        }
-        const { user } = authResult;
+        // SECURITY: Optional authentication - allow guest check
+        const authResult = await optionalAuth(request);
+        const user = authResult.user;
+
+        // If no user, we still let them check cache, but generation might be restricted
+        // (Decision: Keep restricted for now to save quota, but give better error)
 
         // Initialize clients (lazy initialization to avoid build errors)
         const deepgram = createDeepgram(process.env.DEEPGRAM_API_KEY || '');
@@ -26,6 +26,15 @@ export async function POST(request: NextRequest) {
         if (!videoUrl) {
             return NextResponse.json(
                 { error: 'Video URL is required' },
+                { status: 400 }
+            );
+        }
+
+        // Check if this is a YouTube URL
+        const isYouTube = videoUrl.includes('youtube.com/') || videoUrl.includes('youtu.be/');
+        if (isYouTube) {
+            return NextResponse.json(
+                { error: 'YouTube subtitles are handled automatically via the transcript service. Please use the "Show Transcript" button instead.' },
                 { status: 400 }
             );
         }
@@ -132,7 +141,7 @@ export async function POST(request: NextRequest) {
 
         const geminiKey = GEMINI_KEYS[Math.floor(Math.random() * GEMINI_KEYS.length)];
         const genAI = new GoogleGenerativeAI(geminiKey);
-        const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' }); // Same as Smart Chat!
+        const model = genAI.getGenerativeModel({ model: 'gemini-flash-latest' });
 
         const sentences = englishSegments.map(s => s.text_en);
         const translationPrompt = `Translate these English sentences to Russian. Return ONLY a JSON array: ${JSON.stringify(sentences)}`;

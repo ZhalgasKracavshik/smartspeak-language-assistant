@@ -40,13 +40,53 @@ export default function ModuleTest({ vocabulary, moduleNumber }: ModuleTestProps
     const isSubmittingRef = useRef(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    // localStorage key for this module's in-progress test
+    const progressKey = `grade9_module_${moduleNumber}_progress`;
+
+    // Restore progress on mount
+    useEffect(() => {
+        const saved = localStorage.getItem(progressKey);
+        if (saved) {
+            try {
+                const data = JSON.parse(saved);
+                if (data.questions && data.questions.length > 0) {
+                    setQuestions(data.questions);
+                    setCurrentQuestionIndex(data.currentQuestionIndex || 0);
+                    setScore(data.score || 0);
+                    setTestStarted(true);
+                    setShowResults(false);
+                }
+            } catch (e) {
+                console.error('Failed to restore test progress:', e);
+                localStorage.removeItem(progressKey);
+            }
+        }
+    }, [progressKey]);
+
     // Reset ref when index changes (new question ready)
     useEffect(() => {
         isSubmittingRef.current = false;
         setIsSubmitting(false);
     }, [currentQuestionIndex]);
 
+    // Save progress whenever state changes during active test
+    useEffect(() => {
+        if (testStarted && !showResults && questions.length > 0) {
+            localStorage.setItem(progressKey, JSON.stringify({
+                questions,
+                currentQuestionIndex,
+                score
+            }));
+        }
+    }, [questions, currentQuestionIndex, score, testStarted, showResults, progressKey]);
+
+    const clearProgress = () => {
+        localStorage.removeItem(progressKey);
+    };
+
     const generateTest = () => {
+        clearProgress();
+
         if (vocabulary.length < 5) return;
 
         const newQuestions: Question[] = [];
@@ -129,6 +169,9 @@ export default function ModuleTest({ vocabulary, moduleNumber }: ModuleTestProps
             totalQuestions: questions.length
         });
         localStorage.setItem(`grade9_module_${moduleNumber}_tests`, JSON.stringify(history));
+
+        // Clear in-progress data since test is complete
+        clearProgress();
     };
 
     if (!testStarted) {

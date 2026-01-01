@@ -26,7 +26,7 @@ export async function generateDailyContent(): Promise<DailyContent[]> {
         const interestsStr = interests.length > 0 ? interests.join(', ') : 'general English learning';
 
         // Use the stable free model
-        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
+        const model = genAI.getGenerativeModel({ model: 'gemini-flash-latest' });
 
         const prompt = `You are an expert English teacher curating content. 
         Select 3 REAL, EXISTING, and POPULAR YouTube videos for a student with:
@@ -62,14 +62,17 @@ export async function generateDailyContent(): Promise<DailyContent[]> {
         const items = JSON.parse(jsonMatch[0]);
 
         // Transform to DailyContent format
-        return items.map((item: any, index: number) => ({
-            id: `daily-${Date.now()}-${index}`,
-            title: item.title || 'Untitled',
-            type: item.type || 'video',
-            url: item.url || '',
-            description: item.description || '',
-            thumbnail: item.type === 'video' ? `https://img.youtube.com/vi/${extractYouTubeId(item.url)}/mqdefault.jpg` : undefined
-        })).filter((item: DailyContent) => item.url); // Filter out items without URL
+        return items.map((item: any, index: number) => {
+            const youtubeId = item.type === 'video' ? extractYouTubeId(item.url) : '';
+            return {
+                id: `daily-${Date.now()}-${index}`,
+                title: item.title || 'Untitled',
+                type: item.type || 'video',
+                url: item.url || '',
+                description: item.description || '',
+                thumbnail: youtubeId ? `https://i.ytimg.com/vi/${youtubeId}/hqdefault.jpg` : undefined
+            };
+        }).filter((item: DailyContent) => item.url); // Filter out items without URL
 
     } catch (error) {
         console.error('Error generating daily content:', error);
@@ -78,36 +81,21 @@ export async function generateDailyContent(): Promise<DailyContent[]> {
 }
 
 function extractYouTubeId(url: string): string {
-    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+    const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
     const match = url.match(regExp);
-    return (match && match[2].length === 11) ? match[2] : '';
+    return (match && match[7].length === 11) ? match[7] : '';
 }
 
 function getDefaultContent(): DailyContent[] {
     return [
         {
             id: 'default-1',
-            title: 'English Listening Practice - Easy Conversation',
+            title: 'Welcome to SmartSpeak (Demo)',
             type: 'video',
-            url: 'https://www.youtube.com/watch?v=VBu_bc40ytc',
-            description: 'Practice your listening skills with simple everyday conversations.',
-            thumbnail: 'https://img.youtube.com/vi/VBu_bc40ytc/mqdefault.jpg'
-        },
-        {
-            id: 'default-2',
-            title: 'Learn English Through Story',
-            type: 'video',
-            url: 'https://www.youtube.com/watch?v=K3mYLJdZ39o',
-            description: 'Improve your English by listening to interesting stories.',
-            thumbnail: 'https://img.youtube.com/vi/K3mYLJdZ39o/mqdefault.jpg'
-        },
-        {
-            id: 'default-3',
-            title: 'English Songs for Learning',
-            type: 'song',
-            url: 'https://www.youtube.com/watch?v=ru0K8uYEZWw',
-            description: 'Learn English vocabulary and pronunciation through popular songs.',
-            thumbnail: 'https://img.youtube.com/vi/ru0K8uYEZWw/mqdefault.jpg'
+            // Example Cloudinary URL - User needs to replace this with their own upload
+            url: 'https://res.cloudinary.com/demo/video/upload/v1687513245/samples/cld-sample-video.mp4',
+            description: 'A welcome video demonstrating the player capabilities. Please upload your own content to Cloudinary.',
+            thumbnail: 'https://res.cloudinary.com/demo/video/upload/w_400,h_300,c_fill/v1687513245/samples/cld-sample-video.jpg'
         }
     ];
 }

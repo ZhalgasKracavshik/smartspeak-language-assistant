@@ -33,8 +33,10 @@ export function SmartChat() {
     const [isLoading, setIsLoading] = useState(false);
     const [isInitialLoading, setIsInitialLoading] = useState(true);
     const [mode, setMode] = useState<'tutor' | 'conversation' | 'quiz'>('tutor');
+    const [quotaCountdown, setQuotaCountdown] = useState<number | null>(null);
     const scrollAreaRef = useRef<HTMLDivElement>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const timerRef = useRef<NodeJS.Timeout | null>(null);
 
     // Load history on mount
     useEffect(() => {
@@ -138,6 +140,19 @@ export function SmartChat() {
         }
     }, [messages, isLoading]);
 
+    // Quota countdown timer
+    useEffect(() => {
+        if (quotaCountdown !== null && quotaCountdown > 0) {
+            timerRef.current = setInterval(() => {
+                setQuotaCountdown(prev => (prev && prev > 0) ? prev - 1 : null);
+            }, 1000);
+        } else {
+            if (timerRef.current) clearInterval(timerRef.current);
+            setQuotaCountdown(null);
+        }
+        return () => { if (timerRef.current) clearInterval(timerRef.current); };
+    }, [quotaCountdown]);
+
     const handleSend = async () => {
         if (!input.trim()) return;
 
@@ -181,6 +196,10 @@ export function SmartChat() {
                     timestamp: new Date()
                 };
                 setMessages(prev => [...prev, errorMessage]);
+
+                if (response.retryAfter) {
+                    setQuotaCountdown(response.retryAfter);
+                }
             } else {
                 const botMessage: Message = {
                     id: (Date.now() + 1).toString(),
@@ -319,18 +338,31 @@ export function SmartChat() {
                     </div>
 
                     <div className="p-4 bg-white border-t">
+                        {quotaCountdown !== null && (
+                            <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                className="mb-2 p-2 bg-amber-50 border border-amber-200 rounded-lg flex items-center justify-between text-amber-800 text-xs"
+                            >
+                                <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
+                                    <span>AI brain cooling down...</span>
+                                </div>
+                                <span className="font-mono font-bold">{quotaCountdown}s</span>
+                            </motion.div>
+                        )}
                         <div className="flex gap-2">
                             <Input
-                                placeholder="Type a message..."
+                                placeholder={quotaCountdown !== null ? `Locked for ${quotaCountdown}s...` : "Type a message..."}
                                 value={input}
                                 onChange={(e) => setInput(e.target.value)}
                                 onKeyDown={handleKeyPress}
-                                disabled={isLoading}
+                                disabled={isLoading || quotaCountdown !== null}
                                 className="flex-1"
                             />
                             <Button
                                 onClick={handleSend}
-                                disabled={isLoading || !input.trim()}
+                                disabled={isLoading || !input.trim() || quotaCountdown !== null}
                                 className="bg-purple-600 hover:bg-purple-700 text-white"
                             >
                                 <Send className="size-4" />

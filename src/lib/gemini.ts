@@ -23,8 +23,8 @@ export const getGeminiModel = () => {
     console.log(`Using Gemini API key index: ${currentKeyIndex} of ${API_KEYS.length}`);
 
     const genAI = new GoogleGenerativeAI(key);
-    // Using gemini-flash-latest (Stable 1.5 Flash) to avoid 2.0 quota limits
-    return genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
+    // Using gemini-flash-latest (Confirmed available in user list)
+    return genAI.getGenerativeModel({ model: 'gemini-flash-latest' });
 };
 
 // Export function to check if API is configured

@@ -36,7 +36,7 @@ import { logSecurityEvent } from './securityLogger';
 // ... (imports remain the same)
 
 class GeminiContentService {
-    private model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
+    private model = genAI.getGenerativeModel({ model: 'gemini-flash-latest' });
 
     async generateDailyContent(): Promise<GeneratedContent | null> {
         const profile = getUserProfileService().getProfile();

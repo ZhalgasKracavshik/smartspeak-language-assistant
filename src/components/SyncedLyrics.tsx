@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Subtitle, Word } from '@/types/media';
+import { Subtitle, Word } from '../types/media';
 import { motion, AnimatePresence } from 'framer-motion';
 import '../components/Improvements.css';
 
@@ -94,8 +94,8 @@ export function SyncedLyrics({ subtitles, currentTime, onSeek }: SyncedLyricsPro
                                         <span
                                             key={wordIndex}
                                             className={`synced-lyrics__word word-tooltip ${isActive && wordIndex === activeWordIndex
-                                                    ? 'synced-lyrics__word--active'
-                                                    : ''
+                                                ? 'synced-lyrics__word--active'
+                                                : ''
                                                 }`}
                                             onMouseEnter={() => setHoveredWord(word.translation ? { word: word.word, translation: word.translation } : null)}
                                             onMouseLeave={() => setHoveredWord(null)}

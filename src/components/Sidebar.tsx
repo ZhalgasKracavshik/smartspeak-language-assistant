@@ -137,13 +137,13 @@ export function Sidebar() {
           {!isGuest && <Progress value={progressPercent} className="h-1.5" />}
           {!isGuest && <p className="text-[10px] text-gray-400 mt-1 text-right">{currentXp} / {xpForNextLevel} XP</p>}
           {isGuest && (
-            <button
-              onClick={() => router.push('/login')}
+            <Link
+              href="/login"
               className="text-xs text-blue-600 hover:text-blue-700 hover:underline mt-2 w-full text-left font-medium transition-colors flex items-center gap-1"
             >
               Sign in to save progress
               <LogIn className="w-3 h-3" />
-            </button>
+            </Link>
           )}
         </div>
       )}

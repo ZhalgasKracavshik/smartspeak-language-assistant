@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getGeminiModel } from '@/lib/gemini';
-import { requireAuth } from '@/middleware/auth';
+import { optionalAuth } from '@/middleware/auth';
+
+// Simple in-memory rate limiter for guests
+// Note: In serverless, this is per-instance, but provides a baseline defense.
+const guestRateLimits = new Map<string, { count: number; resetTime: number }>();
+const GUEST_LIMIT = 3;
+const GUEST_WINDOW_MS = 60 * 1000; // 1 minute
 
 // SmartSpeak AI Teacher System Prompt
 const PROMPTS = {
@@ -44,12 +50,34 @@ const PROMPTS = {
 
 export async function POST(request: NextRequest) {
     try {
-        // SECURITY: Require authentication
-        const authResult = await requireAuth(request);
-        if (authResult instanceof NextResponse) {
-            return authResult;
+        const ip = request.headers.get('x-forwarded-for') || 'anonymous';
+
+        // SECURITY: Optional authentication - allow guest access
+        const authResult = await optionalAuth(request);
+        const user = authResult.user;
+
+        // Rate limiting for guests
+        if (!user) {
+            const now = Date.now();
+            const rateData = guestRateLimits.get(ip) || { count: 0, resetTime: now + GUEST_WINDOW_MS };
+
+            if (now > rateData.resetTime) {
+                rateData.count = 0;
+                rateData.resetTime = now + GUEST_WINDOW_MS;
+            }
+
+            if (rateData.count >= GUEST_LIMIT) {
+                const waitSec = Math.ceil((rateData.resetTime - now) / 1000);
+                return NextResponse.json({
+                    error: `Guest limit reached. Please log in for unlimited chat or wait ${waitSec}s.`,
+                    retryAfter: waitSec,
+                    isRateLimit: true
+                }, { status: 429 });
+            }
+
+            rateData.count++;
+            guestRateLimits.set(ip, rateData);
         }
-        const { user } = authResult;
 
         const { message, history = [], mode = 'tutor' } = await request.json();
 
@@ -107,9 +135,17 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ reply: text });
     } catch (error: any) {
         console.error('Chat API Error:', error);
-        // Return error as a chat message for debugging visibility in UI
+
+        // Handle Gemini Quota Errors specifically for the countdown
+        const isQuotaError = error?.message?.includes('429') || error?.status === 429;
+
         return NextResponse.json({
-            reply: `⚠️ **System Error**: Failed to process message.\n\n**Error Details**: ${error?.message}\n**Model**: ${getGeminiModel().model}`
-        });
+            error: isQuotaError
+                ? '🤖 **Quota Reached**: My free-tier brain needs a short break. Please wait 60 seconds.'
+                : `⚠️ **System Error**: ${error?.message}`,
+            retryAfter: isQuotaError ? 60 : undefined,
+            isQuota: isQuotaError,
+            model: getGeminiModel()?.model
+        }, { status: isQuotaError ? 429 : 500 });
     }
 }

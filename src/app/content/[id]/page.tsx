@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
+import * as React from 'react';
+import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
-import { MediaWithSubtitles } from '@/types/media';
-import { CloudinaryPlayer } from '@/components/CloudinaryPlayer';
-import { SyncedLyrics } from '@/components/SyncedLyrics';
-import { ShadowingRecorder } from '@/components/ShadowingRecorder';
-import '@/components/LyricsPlayer.css';
+import { MediaWithSubtitles } from '../../../types/media';
+import { CloudinaryPlayer } from '../../../components/CloudinaryPlayer';
+import { SyncedLyrics } from '../../../components/SyncedLyrics';
+import { ShadowingRecorder } from '../../../components/ShadowingRecorder';
+import '../../../components/LyricsPlayer.css';
 
 export default function MediaPlayerPage() {
     const params = useParams();
@@ -35,6 +36,34 @@ export default function MediaPlayerPage() {
             }
 
             const data = await response.json();
+
+            // If it's a YouTube video and has no subtitles, try to fetch transcripts
+            if (data.type === 'video' && (!data.subtitles || data.subtitles.length === 0)) {
+                const youtubeId = getYouTubeVideoId(data.cloudinary_url);
+                if (youtubeId) {
+                    try {
+                        const { fetchTranscript } = await import('../../../services/transcriptService');
+                        const segments = await fetchTranscript(youtubeId, data.title, data.type);
+
+                        // Convert segments to subtitles format
+                        if (segments.length > 0 && !segments[0].text.includes('not available')) {
+                            const youtubeSubtitles = segments.map((s, i) => ({
+                                id: `yt-${i}`,
+                                media_id: data.id,
+                                start_time: s.startTime,
+                                end_time: s.endTime,
+                                text_en: s.text,
+                                text_ru: '', // We don't have Russian for YT transcripts yet
+                                words: []
+                            }));
+                            data.subtitles = youtubeSubtitles;
+                        }
+                    } catch (tsError) {
+                        console.error('Failed to fetch YT transcript:', tsError);
+                    }
+                }
+            }
+
             setMedia(data);
             setError(null);
         } catch (err) {
@@ -44,6 +73,13 @@ export default function MediaPlayerPage() {
             setLoading(false);
         }
     };
+
+    function getYouTubeVideoId(url: string): string | null {
+        if (!url) return null;
+        const regExp = /^.*(youtu\.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+        const match = url.match(regExp);
+        return (match && match[2].length === 11) ? match[2] : null;
+    }
 
     const handleGenerateSubtitles = async () => {
         if (!media) return;
@@ -135,29 +171,32 @@ export default function MediaPlayerPage() {
 
                         <ShadowingRecorder originalAudioUrl={media.cloudinary_url} />
 
-                        {/* Generate Subtitles Button */}
-                        {media.subtitles.length === 0 && !isGeneratingSubtitles && (
-                            <button
-                                onClick={handleGenerateSubtitles}
-                                className="subtitle-generate-btn"
-                                style={{
-                                    marginTop: '1rem',
-                                    padding: '0.75rem 1.5rem',
-                                    background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                                    color: 'white',
-                                    border: 'none',
-                                    borderRadius: '8px',
-                                    cursor: 'pointer',
-                                    fontSize: '1rem',
-                                    fontWeight: '600',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '0.5rem'
-                                }}
-                            >
-                                ✨ Сгенерировать субтитры
-                            </button>
-                        )}
+                        {/* Generate Subtitles Button - Only for non-YouTube/Spotify */}
+                        {media.subtitles.length === 0 &&
+                            !isGeneratingSubtitles &&
+                            !media.cloudinary_url.includes('youtube.com') &&
+                            !media.cloudinary_url.includes('youtu.be') && (
+                                <button
+                                    onClick={handleGenerateSubtitles}
+                                    className="subtitle-generate-btn"
+                                    style={{
+                                        marginTop: '1rem',
+                                        padding: '0.75rem 1.5rem',
+                                        background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '8px',
+                                        cursor: 'pointer',
+                                        fontSize: '1rem',
+                                        fontWeight: '600',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.5rem'
+                                    }}
+                                >
+                                    ✨ Сгенерировать субтитры
+                                </button>
+                            )}
 
                         {isGeneratingSubtitles && (
                             <div style={{

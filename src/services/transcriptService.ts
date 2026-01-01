@@ -1,5 +1,5 @@
 // For AI-generated transcripts, use aiTranscription.ts instead
-import { MediaType } from '@/types/media';
+import { MediaType } from '../types/media';
 
 
 export interface TranscriptSegment {
