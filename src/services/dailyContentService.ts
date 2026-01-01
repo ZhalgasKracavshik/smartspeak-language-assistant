@@ -89,15 +89,15 @@ function extractYouTubeId(url: string): string {
 function getDefaultContent(): DailyContent[] {
     return [
         {
-            id: 'stranger-things-podcast',
-            title: 'Stranger Things Cast: Quick-fire Questions',
+            id: 'puss-in-boots',
+            title: 'Puss in Boots vs Death Scene',
             type: 'video',
-            url: 'https://res.cloudinary.com/demo/video/upload/v1687513245/samples/cld-sample-video.mp4',
-            description: 'Listen to Millie Bobby Brown and the cast answer fun questions. Great for casual conversation practice.',
-            thumbnail: 'https://res.cloudinary.com/demo/video/upload/w_400,h_300,c_fill/v1687513245/samples/cld-sample-video.jpg'
+            url: 'https://res.cloudinary.com/dvn30df1m/video/upload/v1767309465/Puss_in_Boots__The_Last_Wish_2022_Puss_in_Boots_vs_Death_Scene___n8krqz.mp4',
+            description: 'A thrilling scene from Puss in Boots. Great for emotional expression practice.',
+            thumbnail: 'https://res.cloudinary.com/dvn30df1m/video/upload/w_400,h_300,c_fill/v1767309465/Puss_in_Boots__The_Last_Wish_2022_Puss_in_Boots_vs_Death_Scene___n8krqz.jpg'
         },
         {
-            id: 'bbc-story-1',
+            id: 'demo-bbc-story',
             title: 'Are we nearly there yet? (BBC Learning English)',
             type: 'video',
             url: 'https://res.cloudinary.com/demo/video/upload/v1687513245/samples/cld-sample-video.mp4',

@@ -129,8 +129,8 @@ export async function POST(request: NextRequest) {
 
         console.log(`Created ${englishSegments.length} segments`);
 
-        // Step 5: Translate to Russian using Gemini (same model as Smart Chat!)
-        console.log('Translating to Russian with Gemini...');
+        // Step 5: Process with Gemini for natural translation and word-level details
+        console.log('Processing with Gemini for transcription & translation...');
 
         const GEMINI_KEYS = [
             process.env.GEMINI_API_KEY,
@@ -144,26 +144,67 @@ export async function POST(request: NextRequest) {
         const model = genAI.getGenerativeModel({ model: 'gemini-flash-latest' });
 
         const sentences = englishSegments.map(s => s.text_en);
-        const translationPrompt = `Translate these English sentences to Russian. Return ONLY a JSON array: ${JSON.stringify(sentences)}`;
 
-        const translationResult = await model.generateContent(translationPrompt);
-        const translationText = translationResult.response.text();
+        // Revised prompt for word-level details including transcription
+        const prompt = `Act as an expert linguist and English teacher.
+Process these English sentences and for EACH one return:
+1. "translation": Natural Russian translation of the whole sentence.
+2. "wordDetails": An array of objects for each word in the sentence containing:
+   - "word": The original word from the sentence.
+   - "transcription": Phonetic transcription in US/UK English (e.g., [həˈloʊ]).
+   - "translation": Russian translation for THIS SPECIFIC word in context.
 
-        const jsonMatch = translationText.match(/\[[\s\S]*\]/);
-        const translations: string[] = jsonMatch ? JSON.parse(jsonMatch[0]) : [];
+Return ONLY a JSON array of objects.
+Input: ${JSON.stringify(sentences)}`;
 
-        // Step 6: Combine English and Russian
-        const subtitles = englishSegments.map((segment, index) => ({
-            id: `subtitle-${index}`,
-            media_id: 'generated',
-            start_time: segment.start_time,
-            end_time: segment.end_time,
-            text_en: segment.text_en,
-            text_ru: translations[index] || '',
-            words: []
-        }));
+        const geminiResult = await model.generateContent(prompt);
+        const geminiText = geminiResult.response.text();
 
-        console.log(`Generated ${subtitles.length} bilingual subtitles`);
+        const jsonMatch = geminiText.match(/\[[\s\S]*\]/);
+        const geminiData = jsonMatch ? JSON.parse(jsonMatch[0]) : [];
+
+        // Get all words from Deepgram to use their timings
+        const deepgramWords = result.results.channels[0].alternatives[0].words || [];
+
+        // Step 6: Combine everything into final subtitles
+        const subtitles = englishSegments.map((segment, index) => {
+            const data = geminiData[index] || {};
+
+            // Filter Deepgram words that fall into this segment's time range
+            const segmentWords = deepgramWords.filter(
+                (w: any) => w.start >= segment.start_time && w.end <= segment.end_time + 0.1
+            );
+
+            // Merge Gemini's word-level data (transcription/translation) with Deepgram's timing
+            const finalWords = segmentWords.map((dw: any) => {
+                // Try to find matching word in Gemini's wordDetails
+                // Remove punctuation for matching
+                const cleanDeepgramWord = dw.word.toLowerCase().replace(/[.,!?;:]/g, '');
+                const gWord = data.wordDetails?.find((gw: any) =>
+                    gw.word.toLowerCase().replace(/[.,!?;:]/g, '') === cleanDeepgramWord
+                );
+
+                return {
+                    word: dw.word,
+                    start: dw.start,
+                    end: dw.end,
+                    transcription: gWord?.transcription || '',
+                    translation: gWord?.translation || ''
+                };
+            });
+
+            return {
+                id: `subtitle-${index}`,
+                media_id: 'generated',
+                start_time: segment.start_time,
+                end_time: segment.end_time,
+                text_en: segment.text_en,
+                text_ru: data.translation || '',
+                words: finalWords
+            };
+        });
+
+        console.log(`Generated ${subtitles.length} enriched bilingual subtitles`);
 
         const duration = subtitles[subtitles.length - 1]?.end_time || 0;
 
