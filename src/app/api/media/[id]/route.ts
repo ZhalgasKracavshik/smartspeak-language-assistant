@@ -20,57 +20,86 @@ export async function GET(
     try {
         const { id } = params;
 
-        // Handle default content (hardcoded fallback)
-        if (id.startsWith('default-')) {
-            const defaultVideos: Record<string, MediaWithSubtitles> = {
-                'default-1': {
-                    id: 'default-1',
-                    title: 'English Listening Practice - Easy Conversation',
-                    description: 'Practice your listening skills with simple everyday conversations.',
-                    type: 'video',
-                    cloudinary_id: '',
-                    cloudinary_url: 'https://www.youtube.com/watch?v=VBu_bc40ytc',
-                    thumbnail_url: 'https://img.youtube.com/vi/VBu_bc40ytc/mqdefault.jpg',
-                    duration: 300,
-                    created_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString(),
-                    view_count: 50,
-                    subtitles: []
-                },
-                'default-2': {
-                    id: 'default-2',
-                    title: 'Learn English Through Story',
-                    description: 'Improve your English by listening to interesting stories.',
-                    type: 'video',
-                    cloudinary_id: '',
-                    cloudinary_url: 'https://www.youtube.com/watch?v=K3mYLJdZ39o',
-                    thumbnail_url: 'https://img.youtube.com/vi/K3mYLJdZ39o/mqdefault.jpg',
-                    duration: 450,
-                    created_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString(),
-                    view_count: 120,
-                    subtitles: []
-                },
-                'default-3': {
-                    id: 'default-3',
-                    title: 'English Songs for Learning',
-                    description: 'Learn English vocabulary and pronunciation through popular songs.',
-                    type: 'video',
-                    cloudinary_id: '',
-                    cloudinary_url: 'https://www.youtube.com/watch?v=ru0K8uYEZWw',
-                    thumbnail_url: 'https://img.youtube.com/vi/ru0K8uYEZWw/mqdefault.jpg',
-                    duration: 240,
-                    created_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString(),
-                    view_count: 200,
-                    subtitles: []
-                }
-            };
+        // Handle static/default content (hardcoded fallback)
+        const staticVideos: Record<string, MediaWithSubtitles> = {
+            'puss-in-boots': {
+                id: 'puss-in-boots',
+                title: 'Puss in Boots vs Death Scene',
+                description: 'A thrilling scene from Puss in Boots. Great for emotional expression practice.',
+                type: 'video',
+                cloudinary_id: 'Puss_in_Boots__The_Last_Wish_2022_Puss_in_Boots_vs_Death_Scene___n8krqz',
+                cloudinary_url: 'https://res.cloudinary.com/dvn30df1m/video/upload/v1767309465/Puss_in_Boots__The_Last_Wish_2022_Puss_in_Boots_vs_Death_Scene___n8krqz.mp4',
+                thumbnail_url: 'https://res.cloudinary.com/dvn30df1m/video/upload/w_400,h_300,c_fill/v1767309465/Puss_in_Boots__The_Last_Wish_2022_Puss_in_Boots_vs_Death_Scene___n8krqz.jpg',
+                duration: 180,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+                view_count: 1542,
+                category: 'movies',
+                difficulty: 'intermediate',
+                subtitles: []
+            },
+            'demo-bbc-story': {
+                id: 'demo-bbc-story',
+                title: 'Are we nearly there yet? (BBC Learning English)',
+                description: 'A fun story about a family car journey. Perfect for learning travel vocabulary.',
+                type: 'video',
+                cloudinary_id: 'samples/cld-sample-video',
+                cloudinary_url: 'https://res.cloudinary.com/demo/video/upload/v1687513245/samples/cld-sample-video.mp4',
+                thumbnail_url: 'https://res.cloudinary.com/demo/video/upload/w_400,h_300,c_fill/v1687513245/samples/cld-sample-video.jpg',
+                duration: 120,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+                view_count: 850,
+                category: 'kids',
+                difficulty: 'beginner',
+                subtitles: []
+            },
+            'default-1': {
+                id: 'default-1',
+                title: 'English Listening Practice - Easy Conversation',
+                description: 'Practice your listening skills with simple everyday conversations.',
+                type: 'video',
+                cloudinary_id: '',
+                cloudinary_url: 'https://www.youtube.com/watch?v=VBu_bc40ytc',
+                thumbnail_url: 'https://img.youtube.com/vi/VBu_bc40ytc/mqdefault.jpg',
+                duration: 300,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+                view_count: 50,
+                subtitles: []
+            },
+            'default-2': {
+                id: 'default-2',
+                title: 'Learn English Through Story',
+                description: 'Improve your English by listening to interesting stories.',
+                type: 'video',
+                cloudinary_id: '',
+                cloudinary_url: 'https://www.youtube.com/watch?v=K3mYLJdZ39o',
+                thumbnail_url: 'https://img.youtube.com/vi/K3mYLJdZ39o/mqdefault.jpg',
+                duration: 450,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+                view_count: 120,
+                subtitles: []
+            },
+            'default-3': {
+                id: 'default-3',
+                title: 'English Songs for Learning',
+                description: 'Learn English vocabulary and pronunciation through popular songs.',
+                type: 'video',
+                cloudinary_id: '',
+                cloudinary_url: 'https://www.youtube.com/watch?v=ru0K8uYEZWw',
+                thumbnail_url: 'https://img.youtube.com/vi/ru0K8uYEZWw/mqdefault.jpg',
+                duration: 240,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+                view_count: 200,
+                subtitles: []
+            }
+        };
 
-            const video = defaultVideos[id];
-            if (video) return NextResponse.json(video);
-            // If default ID not found, fall through or 404
-        }
+        const staticVideo = staticVideos[id];
+        if (staticVideo) return NextResponse.json(staticVideo);
 
         // Check for demo video ID
         if (id === '123e4567-e89b-12d3-a456-426614174000') {
