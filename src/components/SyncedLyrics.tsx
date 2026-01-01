@@ -14,7 +14,7 @@ interface SyncedLyricsProps {
 export function SyncedLyrics({ subtitles, currentTime, onSeek }: SyncedLyricsProps) {
     const [activeSubtitleIndex, setActiveSubtitleIndex] = useState(-1);
     const [activeWordIndex, setActiveWordIndex] = useState(-1);
-    const [hoveredWord, setHoveredWord] = useState<{ word: string; translation?: string } | null>(null);
+    const [hoveredWord, setHoveredWord] = useState<Word | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const activeLineRef = useRef<HTMLDivElement>(null);
 
@@ -97,19 +97,41 @@ export function SyncedLyrics({ subtitles, currentTime, onSeek }: SyncedLyricsPro
                                                 ? 'synced-lyrics__word--active'
                                                 : ''
                                                 }`}
-                                            onMouseEnter={() => setHoveredWord(word.translation ? { word: word.word, translation: word.translation } : null)}
+                                            onMouseEnter={() => setHoveredWord(word)}
                                             onMouseLeave={() => setHoveredWord(null)}
                                             style={{
                                                 color: isActive && wordIndex === activeWordIndex ? '#FFD700' : isActive ? '#FFFFFF' : '#9CA3AF',
                                                 transform: isActive && wordIndex === activeWordIndex ? 'scale(1.1)' : 'scale(1)',
                                                 transition: 'all 0.2s ease',
                                                 display: 'inline-block',
+                                                position: 'relative',
+                                                cursor: 'pointer',
                                             }}
                                         >
                                             {word.word}{' '}
-                                            {hoveredWord?.word === word.word && hoveredWord.translation && (
-                                                <span className="word-tooltip__content">
-                                                    {hoveredWord.translation}
+                                            {hoveredWord?.word === word.word && (word.transcription || word.translation) && (
+                                                <span className="word-tooltip__content" style={{
+                                                    position: 'absolute',
+                                                    bottom: '100%',
+                                                    left: '50%',
+                                                    transform: 'translateX(-50%)',
+                                                    background: 'linear-gradient(135deg, #1e293b, #334155)',
+                                                    color: 'white',
+                                                    padding: '8px 12px',
+                                                    borderRadius: '8px',
+                                                    fontSize: '12px',
+                                                    whiteSpace: 'nowrap',
+                                                    zIndex: 100,
+                                                    boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                                                    border: '1px solid rgba(255,255,255,0.1)',
+                                                }}>
+                                                    <div style={{ fontWeight: 'bold', marginBottom: '2px' }}>{word.word}</div>
+                                                    {word.transcription && (
+                                                        <div style={{ color: '#a5b4fc', fontStyle: 'italic' }}>[{word.transcription}]</div>
+                                                    )}
+                                                    {word.translation && (
+                                                        <div style={{ color: '#86efac', marginTop: '2px' }}>{word.translation}</div>
+                                                    )}
                                                 </span>
                                             )}
                                         </span>

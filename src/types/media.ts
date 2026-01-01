@@ -10,6 +10,7 @@ export interface Word {
     word: string;
     start: number; // seconds
     end: number; // seconds
+    transcription?: string; // phonetic transcription like [həˈloʊ]
     translation?: string;
 }
 

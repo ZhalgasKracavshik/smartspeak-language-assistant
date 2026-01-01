@@ -91,8 +91,8 @@ export function ContentHub() {
                                 key={value}
                                 onClick={() => handleFilterChange('type', value)}
                                 className={`flex items-center gap-2 px-5 py-2.5 rounded-full font-medium transition-all ${filters.type === value || (!filters.type && value === '')
-                                        ? 'bg-white text-purple-700 shadow-lg'
-                                        : 'bg-white/20 text-white hover:bg-white/30'
+                                    ? 'bg-white text-purple-700 shadow-lg'
+                                    : 'bg-white/20 text-white hover:bg-white/30'
                                     }`}
                             >
                                 <Icon className="w-4 h-4" />
@@ -111,8 +111,8 @@ export function ContentHub() {
                         <Filter className="w-5 h-5 text-purple-600" />
                         <h3 className="font-semibold text-gray-900">Filters</h3>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        <div>
+                    <div className="flex flex-wrap gap-4 items-end">
+                        <div className="flex-1 min-w-[200px]">
                             <label className="block text-sm font-medium text-gray-700 mb-2">Difficulty</label>
                             <select
                                 value={filters.difficulty || ''}
@@ -125,32 +125,12 @@ export function ContentHub() {
                                 <option value="advanced">🔴 Advanced</option>
                             </select>
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
-                            <select
-                                value={filters.category || ''}
-                                onChange={(e) => handleFilterChange('category', e.target.value)}
-                                className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
-                            >
-                                <option value="">All Categories</option>
-                                <option value="movies">🎬 Movies</option>
-                                <option value="tv-shows">📺 TV Shows</option>
-                                <option value="music">🎵 Music</option>
-                                <option value="podcasts">🎙️ Podcasts</option>
-                                <option value="kids">🧸 Kids</option>
-                                <option value="documentaries">📚 Documentaries</option>
-                                <option value="interviews">🎤 Interviews</option>
-                                <option value="business">💼 Business</option>
-                            </select>
-                        </div>
-                        <div className="flex items-end">
-                            <button
-                                onClick={() => setFilters({})}
-                                className="w-full px-4 py-3 rounded-xl text-purple-600 bg-purple-50 hover:bg-purple-100 font-medium transition-all"
-                            >
-                                Clear Filters
-                            </button>
-                        </div>
+                        <button
+                            onClick={() => setFilters({})}
+                            className="px-6 py-3 rounded-xl text-purple-600 bg-purple-50 hover:bg-purple-100 font-medium transition-all"
+                        >
+                            Clear Filters
+                        </button>
                     </div>
                 </div>
 

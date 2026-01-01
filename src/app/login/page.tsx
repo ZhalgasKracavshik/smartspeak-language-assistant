@@ -10,17 +10,13 @@ export default function LoginPage() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Check if guest first
-        const isGuest = localStorage.getItem('smartspeak-is-guest') === 'true';
-        if (isGuest) {
-            router.push('/');
-            return;
-        }
-
+        // Only redirect if user is already logged in (not a guest trying to sign in)
         supabase.auth.getSession().then(({ data: { session } }) => {
             if (session) {
+                // Already logged in, redirect to home
                 router.push('/');
             } else {
+                // Show login form (for guests or non-authenticated users)
                 setLoading(false);
             }
         });
