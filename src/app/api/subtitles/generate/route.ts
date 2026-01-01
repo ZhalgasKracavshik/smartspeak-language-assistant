@@ -177,6 +177,9 @@ Input: ${JSON.stringify(sentences)}`;
 
             // Merge Gemini's word-level data (transcription/translation) with Deepgram's timing
             const finalWords = segmentWords.map((dw: any) => {
+                // Use punctuated_word if available, otherwise raw word to keep punctuation
+                const displayWord = dw.punctuated_word || dw.word;
+
                 // Try to find matching word in Gemini's wordDetails
                 // Remove punctuation for matching
                 const cleanDeepgramWord = dw.word.toLowerCase().replace(/[.,!?;:]/g, '');
@@ -185,7 +188,7 @@ Input: ${JSON.stringify(sentences)}`;
                 );
 
                 return {
-                    word: dw.word,
+                    word: displayWord,
                     start: dw.start,
                     end: dw.end,
                     transcription: gWord?.transcription || '',

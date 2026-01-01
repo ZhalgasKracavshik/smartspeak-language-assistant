@@ -197,12 +197,12 @@ export default function MediaPlayerPage() {
                         </div>
                     </div>
 
-                    {/* Content Layout: Player and Lyrics Side by Side */}
+                    {/* Content Layout: Player and Lyrics Side by Side - Video Larger */}
                     <div className="p-8">
-                        <div className="grid lg:grid-cols-2 gap-8">
-                            {/* Player Section */}
-                            <div className="space-y-6">
-                                <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-2xl border border-gray-200">
+                        <div className="grid lg:grid-cols-5 gap-8">
+                            {/* Player Section - Takes 3/5 of width */}
+                            <div className="lg:col-span-3 space-y-6">
+                                <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-2xl border border-gray-200 shadow-sm">
                                     <CloudinaryPlayer
                                         type={media.type}
                                         cloudinaryUrl={media.cloudinary_url}
@@ -256,8 +256,8 @@ export default function MediaPlayerPage() {
                                 </div>
                             </div>
 
-                            {/* Synchronized Lyrics Section */}
-                            <div className="space-y-4">
+                            {/* Synchronized Lyrics Section - Takes 2/5 of width */}
+                            <div className="lg:col-span-2 space-y-4">
                                 <div className="flex items-center gap-3 mb-4">
                                     <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-2 rounded-lg">
                                         <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
