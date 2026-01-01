@@ -6,7 +6,6 @@ import { useParams } from 'next/navigation';
 import { MediaWithSubtitles } from '../../../types/media';
 import { CloudinaryPlayer } from '../../../components/CloudinaryPlayer';
 import { SyncedLyrics } from '../../../components/SyncedLyrics';
-import { ShadowingRecorder } from '../../../components/ShadowingRecorder';
 import '../../../components/LyricsPlayer.css';
 
 export default function MediaPlayerPage() {
@@ -19,6 +18,13 @@ export default function MediaPlayerPage() {
     const [currentTime, setCurrentTime] = React.useState(0);
     const [isGeneratingSubtitles, setIsGeneratingSubtitles] = React.useState(false);
     const [subtitleError, setSubtitleError] = React.useState<string | null>(null);
+    const [seekTime, setSeekTime] = React.useState<number | undefined>(undefined);
+
+    const handleSeek = (time: number) => {
+        setSeekTime(time);
+        // Reset seekTime after a short delay so it can be triggered again for the same time
+        setTimeout(() => setSeekTime(undefined), 100);
+    };
 
     React.useEffect(() => {
         if (!id) return;
@@ -76,7 +82,7 @@ export default function MediaPlayerPage() {
 
     function getYouTubeVideoId(url: string): string | null {
         if (!url) return null;
-        const regExp = /^.*(youtu\.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+        const regExp = /^.*(youtu\.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&?]*).*/;
         const match = url.match(regExp);
         return (match && match[2].length === 11) ? match[2] : null;
     }
@@ -102,28 +108,33 @@ export default function MediaPlayerPage() {
                 throw new Error(errorData.error || 'Failed to generate subtitles');
             }
 
-            const data = await response.json();
+            const { subtitles } = await response.json();
+
+            if (!subtitles || subtitles.length === 0) {
+                throw new Error('No subtitles were generated');
+            }
 
             // Update media with new subtitles
-            setMedia(prev => prev ? { ...prev, subtitles: data.subtitles } : null);
-        } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-            setSubtitleError(errorMessage);
-            console.error('Subtitle generation error:', err);
+            setMedia({
+                ...media,
+                subtitles: subtitles
+            });
+
+            setSubtitleError(null);
+        } catch (err: any) {
+            console.error('Error generating subtitles:', err);
+            setSubtitleError(err.message || 'Failed to generate subtitles');
         } finally {
             setIsGeneratingSubtitles(false);
         }
     };
 
-    const handleSeek = (time: number) => {
-        console.log('Seek to:', time);
-    };
-
     if (loading) {
         return (
-            <div className="media-player-page">
-                <div className="media-player-page__loading">
-                    Loading media...
+            <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-600 mx-auto mb-4"></div>
+                    <p className="text-gray-600">Loading content...</p>
                 </div>
             </div>
         );
@@ -131,123 +142,139 @@ export default function MediaPlayerPage() {
 
     if (error || !media) {
         return (
-            <div className="media-player-page">
-                <div className="media-player-page__error">
-                    {error || 'Media not found'}
+            <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 flex items-center justify-center p-6">
+                <div className="max-w-md w-full bg-white/90 backdrop-blur-xl p-8 rounded-3xl shadow-2xl border border-white/50 text-center">
+                    <div className="text-6xl mb-4">😕</div>
+                    <h2 className="text-2xl font-bold text-gray-900 mb-2">Oops!</h2>
+                    <p className="text-gray-600 mb-6">{error || 'Content not found'}</p>
+                    <a href="/learning/content" className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-xl font-semibold hover:shadow-lg transition-all">
+                        ← Back to Content Hub
+                    </a>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="media-player-page">
-            <div className="media-player-page__container">
-                {/* Header */}
-                <div className="media-player-page__header">
-                    <a href="/content" className="media-player-page__back-btn">
-                        ← Back to Content Hub
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 py-8 px-4 sm:px-6 lg:px-8">
+            <div className="max-w-7xl mx-auto">
+                {/* Header with Back Button */}
+                <div className="mb-6">
+                    <a
+                        href="/learning/content"
+                        className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors group"
+                    >
+                        <svg className="w-5 h-5 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                        </svg>
+                        <span className="font-medium">Back to Content Hub</span>
                     </a>
-
-                    <h1 className="media-player-page__title">{media.title}</h1>
-
-                    {media.description && (
-                        <p className="media-player-page__description">{media.description}</p>
-                    )}
                 </div>
 
-                {/* Main Content */}
-                <div className="media-player-page__content">
-                    {/* Player Section */}
-                    <div className="media-player-page__player-section">
-                        <h2 className="media-player-page__section-title">
-                            {media.type === 'video' ? '🎬' : '🎵'} Player
-                        </h2>
-                        <CloudinaryPlayer
-                            type={media.type}
-                            cloudinaryUrl={media.cloudinary_url}
-                            thumbnailUrl={media.thumbnail_url}
-                            onTimeUpdate={setCurrentTime}
-                        />
-
-                        <ShadowingRecorder originalAudioUrl={media.cloudinary_url} />
-
-                        {/* Generate Subtitles Button - Only for non-YouTube/Spotify */}
-                        {media.subtitles.length === 0 &&
-                            !isGeneratingSubtitles &&
-                            !media.cloudinary_url.includes('youtube.com') &&
-                            !media.cloudinary_url.includes('youtu.be') && (
-                                <button
-                                    onClick={handleGenerateSubtitles}
-                                    className="subtitle-generate-btn"
-                                    style={{
-                                        marginTop: '1rem',
-                                        padding: '0.75rem 1.5rem',
-                                        background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                                        color: 'white',
-                                        border: 'none',
-                                        borderRadius: '8px',
-                                        cursor: 'pointer',
-                                        fontSize: '1rem',
-                                        fontWeight: '600',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '0.5rem'
-                                    }}
-                                >
-                                    ✨ Сгенерировать субтитры
-                                </button>
+                {/* Main Content Card */}
+                <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/50 overflow-hidden">
+                    {/* Title Section */}
+                    <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 p-8 text-white">
+                        <div className="flex items-center gap-3 mb-3">
+                            <span className="text-4xl">{media.type === 'video' ? '🎬' : '🎵'}</span>
+                            <div>
+                                <h1 className="text-3xl font-bold mb-2">{media.title}</h1>
+                                <p className="text-blue-100 text-sm">{media.description}</p>
+                            </div>
+                        </div>
+                        <div className="flex gap-2 mt-4">
+                            <span className="bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-semibold">
+                                {media.difficulty}
+                            </span>
+                            <span className="bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-semibold">
+                                {media.category}
+                            </span>
+                            {media.duration && (
+                                <span className="bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-semibold">
+                                    {Math.floor(media.duration / 60)}:{(media.duration % 60).toString().padStart(2, '0')}
+                                </span>
                             )}
-
-                        {isGeneratingSubtitles && (
-                            <div style={{
-                                marginTop: '1rem',
-                                padding: '1rem',
-                                background: 'rgba(99, 102, 241, 0.1)',
-                                borderRadius: '8px',
-                                color: '#6366f1',
-                                fontWeight: '600'
-                            }}>
-                                ⏳ Генерируем субтитры... Это может занять несколько секунд.
-                            </div>
-                        )}
-
-                        {subtitleError && (
-                            <div style={{
-                                marginTop: '1rem',
-                                padding: '1rem',
-                                background: 'rgba(239, 68, 68, 0.1)',
-                                borderRadius: '8px',
-                                color: '#ef4444',
-                                fontWeight: '600'
-                            }}>
-                                ❌ Ошибка: {subtitleError}
-                            </div>
-                        )}
-
-                        {media.subtitles.length > 0 && (
-                            <div style={{
-                                marginTop: '1rem',
-                                padding: '1rem',
-                                background: 'rgba(16, 185, 129, 0.1)',
-                                borderRadius: '8px',
-                                color: '#10b981',
-                                fontWeight: '600'
-                            }}>
-                                ✅ Субтитры загружены: {media.subtitles.length} сегментов
-                            </div>
-                        )}
+                        </div>
                     </div>
 
-                    {/* Lyrics Section */}
-                    <div className="media-player-page__lyrics-section">
-                        <h2 className="media-player-page__section-title">
-                            📝 Synchronized Lyrics
-                        </h2>
-                        <SyncedLyrics
-                            subtitles={media.subtitles}
-                            currentTime={currentTime}
-                            onSeek={handleSeek}
-                        />
+                    {/* Content Layout: Player and Lyrics Side by Side */}
+                    <div className="p-8">
+                        <div className="grid lg:grid-cols-2 gap-8">
+                            {/* Player Section */}
+                            <div className="space-y-6">
+                                <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-2xl border border-gray-200">
+                                    <CloudinaryPlayer
+                                        type={media.type}
+                                        cloudinaryUrl={media.cloudinary_url}
+                                        thumbnailUrl={media.thumbnail_url}
+                                        onTimeUpdate={setCurrentTime}
+                                        seekTime={seekTime}
+                                    />
+                                </div>
+
+                                {/* Generate Subtitles Button */}
+                                {media.subtitles.length === 0 &&
+                                    !isGeneratingSubtitles &&
+                                    !media.cloudinary_url.includes('youtube.com') &&
+                                    !media.cloudinary_url.includes('youtu.be') && (
+                                        <button
+                                            onClick={handleGenerateSubtitles}
+                                            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-4 rounded-xl font-semibold hover:shadow-lg transition-all flex items-center justify-center gap-2 group"
+                                        >
+                                            <svg className="w-5 h-5 group-hover:rotate-12 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                            </svg>
+                                            ✨ Generate AI Subtitles
+                                        </button>
+                                    )}
+
+                                {isGeneratingSubtitles && (
+                                    <div className="bg-blue-50 border border-blue-200 p-4 rounded-xl">
+                                        <div className="flex items-center gap-3">
+                                            <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-blue-600"></div>
+                                            <p className="text-blue-800 font-medium">Generating subtitles...</p>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {subtitleError && (
+                                    <div className="bg-red-50 border border-red-200 p-4 rounded-xl">
+                                        <p className="text-red-800 text-sm">{subtitleError}</p>
+                                    </div>
+                                )}
+
+                                {/* Stats */}
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-xl border border-blue-200">
+                                        <p className="text-blue-600 text-xs font-semibold mb-1">VIEWS</p>
+                                        <p className="text-2xl font-bold text-gray-900">{media.view_count || 0}</p>
+                                    </div>
+                                    <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-xl border border-purple-200">
+                                        <p className="text-purple-600 text-xs font-semibold mb-1">TYPE</p>
+                                        <p className="text-2xl font-bold text-gray-900 capitalize">{media.type}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Synchronized Lyrics Section */}
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-3 mb-4">
+                                    <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-2 rounded-lg">
+                                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                                        </svg>
+                                    </div>
+                                    <h3 className="text-xl font-bold text-gray-900">Interactive Subtitles</h3>
+                                </div>
+                                <div className="bg-gradient-to-br from-gray-900 to-gray-800 p-6 rounded-2xl border border-gray-700 shadow-xl max-h-[600px] overflow-y-auto">
+                                    <SyncedLyrics
+                                        subtitles={media.subtitles}
+                                        currentTime={currentTime}
+                                        onSeek={handleSeek}
+                                    />
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

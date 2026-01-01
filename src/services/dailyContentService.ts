@@ -89,12 +89,19 @@ function extractYouTubeId(url: string): string {
 function getDefaultContent(): DailyContent[] {
     return [
         {
-            id: 'default-1',
-            title: 'Welcome to SmartSpeak (Demo)',
+            id: 'stranger-things-podcast',
+            title: 'Stranger Things Cast: Quick-fire Questions',
             type: 'video',
-            // Example Cloudinary URL - User needs to replace this with their own upload
             url: 'https://res.cloudinary.com/demo/video/upload/v1687513245/samples/cld-sample-video.mp4',
-            description: 'A welcome video demonstrating the player capabilities. Please upload your own content to Cloudinary.',
+            description: 'Listen to Millie Bobby Brown and the cast answer fun questions. Great for casual conversation practice.',
+            thumbnail: 'https://res.cloudinary.com/demo/video/upload/w_400,h_300,c_fill/v1687513245/samples/cld-sample-video.jpg'
+        },
+        {
+            id: 'bbc-story-1',
+            title: 'Are we nearly there yet? (BBC Learning English)',
+            type: 'video',
+            url: 'https://res.cloudinary.com/demo/video/upload/v1687513245/samples/cld-sample-video.mp4',
+            description: 'A fun story about a family car journey. Perfect for learning travel vocabulary.',
             thumbnail: 'https://res.cloudinary.com/demo/video/upload/w_400,h_300,c_fill/v1687513245/samples/cld-sample-video.jpg'
         }
     ];

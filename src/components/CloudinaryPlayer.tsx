@@ -12,6 +12,7 @@ interface CloudinaryPlayerProps {
     onTimeUpdate: (currentTime: number) => void;
     subtitles?: Subtitle[];
     showSubtitles?: boolean;
+    seekTime?: number; // Add this to allow external seeking
 }
 
 // Helper to detect YouTube URLs and extract video ID
@@ -33,6 +34,7 @@ export function CloudinaryPlayer({
     onTimeUpdate,
     subtitles = [],
     showSubtitles = true,
+    seekTime,
 }: CloudinaryPlayerProps) {
     const videoRef = useRef<HTMLVideoElement>(null);
     const audioRef = useRef<HTMLAudioElement>(null);
@@ -141,16 +143,19 @@ export function CloudinaryPlayer({
         return () => clearInterval(interval);
     }, [youtubeVideoId, type, onTimeUpdate, subtitles]);
 
-    // Update playback speed when it changes
     useEffect(() => {
         const mediaElement = type === 'video' ? videoRef.current : audioRef.current;
-        if (mediaElement) {
-            mediaElement.playbackRate = playbackSpeed;
+        if (seekTime !== undefined) {
+            if (mediaElement) {
+                mediaElement.currentTime = seekTime;
+            }
+            if (playerRef.current && playerRef.current.seekTo) {
+                playerRef.current.seekTo(seekTime, true);
+            }
         }
-        if (playerRef.current && playerRef.current.setPlaybackRate) {
-            playerRef.current.setPlaybackRate(playbackSpeed);
-        }
-    }, [playbackSpeed, type]);
+    }, [seekTime, type]);
+
+    // Update playback speed when it changes
 
     const handleSpeedChange = (speed: number) => {
         setPlaybackSpeed(speed);
@@ -186,8 +191,8 @@ export function CloudinaryPlayer({
                         )}
                     </div>
 
-                    {/* Playback Speed Controls */}
-                    <div className="playback-controls">
+                    {/* Playback Speed Controls - Hidden */}
+                    {/* <div className="playback-controls">
                         <span className="playback-controls__label">Speed:</span>
                         <div className="playback-controls__buttons">
                             {speedOptions.map((speed) => (
@@ -200,7 +205,7 @@ export function CloudinaryPlayer({
                                 </button>
                             ))}
                         </div>
-                    </div>
+                    </div> */}
                 </div>
             );
         }
@@ -233,8 +238,8 @@ export function CloudinaryPlayer({
                     )}
                 </div>
 
-                {/* Playback Speed Controls */}
-                <div className="playback-controls">
+                {/* Playback Speed Controls - Hidden */}
+                {/* <div className="playback-controls">
                     <span className="playback-controls__label">Speed:</span>
                     <div className="playback-controls__buttons">
                         {speedOptions.map((speed) => (
@@ -247,7 +252,7 @@ export function CloudinaryPlayer({
                             </button>
                         ))}
                     </div>
-                </div>
+                </div> */}
             </div>
         );
     }
@@ -269,8 +274,8 @@ export function CloudinaryPlayer({
                 Your browser does not support the audio tag.
             </audio>
 
-            {/* Playback Speed Controls */}
-            <div className="playback-controls">
+            {/* Playback Speed Controls - Hidden */}
+            {/* <div className="playback-controls">
                 <span className="playback-controls__label">Speed:</span>
                 <div className="playback-controls__buttons">
                     {speedOptions.map((speed) => (
@@ -283,7 +288,7 @@ export function CloudinaryPlayer({
                         </button>
                     ))}
                 </div>
-            </div>
+            </div> */}
         </div>
     );
 }
