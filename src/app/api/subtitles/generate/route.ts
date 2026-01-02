@@ -146,14 +146,18 @@ export async function POST(request: NextRequest) {
         const sentences = englishSegments.map(s => s.text_en);
 
         // Revised prompt for phonetic correction and multilingual support (Spanish/English)
-        const prompt = `Act as an expert linguist and English teacher.
-Process these English sentences (which may contain phonetically transcribed Spanish words, especially if related to "Puss in Boots").
+        const prompt = `Act as an expert linguist and English teacher checking subtitles for "Puss in Boots".
+Process these English sentences (which may contain phonetically transcribed Spanish words or ASR hallucinations).
 For EACH sentence return:
-1. "translation": Natural Russian translation of the whole sentence.
-2. "wordDetails": An array of objects for each word in the sentence containing:
-   - "word": The corrected word. If you detect a word that was clearly a mis-transcription of a Spanish word (e.g., "Kato" instead of "Gato", "Leech" instead of "Leche"), CORRECT it to the proper Spanish spelling.
-   - "transcription": Phonetic transcription in US/UK English (e.g., [həˈloʊ]). For Spanish words, use Spanish transcription.
-   - "translation": Russian translation for THIS SPECIFIC word in context.
+1. "isValid": BOOLEAN. Set to FALSE if the sentence looks like a hallucination (e.g., random isolated words like "we", "the", "yen", "you" that don't form a coherent sentence, especially likely during foreign speech/music).
+2. "translation": Natural Russian translation.
+3. "wordDetails": An array of objects for each word:
+   - "word": The CORRECTED word. RULES:
+     * If you see "Kato", "Cato", "Cut", "Cat oh" -> replace with "Gato" (Spanish for Cat).
+     * If you see "Leech", "Lech" -> replace with "Leche".
+     * If you see English words that mimic Spanish sets (e.g. "Law but" -> "Lobo"), correct them to Spanish.
+   - "transcription": Phonetic transcription (use Spanish transcription for Spanish words).
+   - "translation": Russian translation.
 
 Return ONLY a JSON array of objects.
 Input: ${JSON.stringify(sentences)}`;
@@ -168,13 +172,20 @@ Input: ${JSON.stringify(sentences)}`;
         const deepgramWords = result.results.channels[0].alternatives[0].words || [];
 
         // Step 6: Combine everything into final subtitles
-        const subtitles = englishSegments.map((segment, index) => {
+        // Filter out invalid segments (hallucinations)
+        const subtitles = englishSegments.map((segment: any, index: number) => {
             const data = geminiData[index] || {};
 
-            // Filter Deepgram words that fall into this segment's time range
-            const segmentWords = deepgramWords.filter(
-                (w: any) => w.start >= segment.start_time && w.end <= segment.end_time + 0.1
-            );
+            // Skip invalid segments or hallucinations
+            if (data.isValid === false) {
+                return null;
+            }
+
+            // Use words directly from the utterance (safest way to prevent data loss)
+            // Fallback to global filtering if utterance words are missing
+            const segmentWords = segment.words && segment.words.length > 0
+                ? segment.words
+                : deepgramWords.filter((w: any) => w.start >= segment.start_time && w.end <= segment.end_time + 0.1);
 
             // Merge Gemini's word-level data (transcription/translation) with Deepgram's timing
             const finalWords = segmentWords.map((dw: any) => {
@@ -184,12 +195,22 @@ Input: ${JSON.stringify(sentences)}`;
                 // Try to find matching word in Gemini's wordDetails
                 // Remove punctuation for matching
                 const cleanDeepgramWord = dw.word.toLowerCase().replace(/[.,!?;:]/g, '');
-                const gWord = data.wordDetails?.find((gw: any) =>
-                    gw.word.toLowerCase().replace(/[.,!?;:]/g, '') === cleanDeepgramWord
-                );
+
+                // Fuzzy matching for corrected words (since we might have changed "Kato" -> "Gato")
+                // We trust Gemini's word order usually matches Deepgram's word order
+                const gWord = data.wordDetails?.find((gw: any) => {
+                    const cleanGeminiWord = gw.word.toLowerCase().replace(/[.,!?;:]/g, '');
+                    // Direct match OR special correction match
+                    return cleanGeminiWord === cleanDeepgramWord ||
+                        (cleanDeepgramWord === 'kato' && cleanGeminiWord === 'gato') ||
+                        (cleanDeepgramWord === 'cato' && cleanGeminiWord === 'gato');
+                });
+
+                // If Gemini provided a corrected word (e.g. Gato), use it instead of Deepgram's (Kato)
+                const finalDisplayWord = gWord?.word ? gWord.word : displayWord;
 
                 return {
-                    word: displayWord,
+                    word: finalDisplayWord,
                     start: dw.start,
                     end: dw.end,
                     transcription: gWord?.transcription || '',
@@ -206,7 +227,7 @@ Input: ${JSON.stringify(sentences)}`;
                 text_ru: data.translation || '',
                 words: finalWords
             };
-        });
+        }).filter(Boolean);
 
         console.log(`Generated ${subtitles.length} enriched bilingual subtitles`);
 
