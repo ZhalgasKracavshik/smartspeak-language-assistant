@@ -145,13 +145,14 @@ export async function POST(request: NextRequest) {
 
         const sentences = englishSegments.map(s => s.text_en);
 
-        // Revised prompt for word-level details including transcription
+        // Revised prompt for phonetic correction and multilingual support (Spanish/English)
         const prompt = `Act as an expert linguist and English teacher.
-Process these English sentences and for EACH one return:
+Process these English sentences (which may contain phonetically transcribed Spanish words, especially if related to "Puss in Boots").
+For EACH sentence return:
 1. "translation": Natural Russian translation of the whole sentence.
 2. "wordDetails": An array of objects for each word in the sentence containing:
-   - "word": The original word from the sentence.
-   - "transcription": Phonetic transcription in US/UK English (e.g., [həˈloʊ]).
+   - "word": The corrected word. If you detect a word that was clearly a mis-transcription of a Spanish word (e.g., "Kato" instead of "Gato", "Leech" instead of "Leche"), CORRECT it to the proper Spanish spelling.
+   - "transcription": Phonetic transcription in US/UK English (e.g., [həˈloʊ]). For Spanish words, use Spanish transcription.
    - "translation": Russian translation for THIS SPECIFIC word in context.
 
 Return ONLY a JSON array of objects.
