@@ -99,7 +99,20 @@ export async function GET(
         };
 
         const staticVideo = staticVideos[id];
-        if (staticVideo) return NextResponse.json(staticVideo);
+        if (staticVideo) {
+            // Check if we have cached subtitles for this video
+            const { data: cachedData } = await supabase
+                .from('subtitle_cache')
+                .select('subtitles')
+                .eq('video_url', staticVideo.cloudinary_url)
+                .single();
+
+            if (cachedData && cachedData.subtitles) {
+                staticVideo.subtitles = cachedData.subtitles;
+            }
+
+            return NextResponse.json(staticVideo);
+        }
 
         // Check for demo video ID
         if (id === '123e4567-e89b-12d3-a456-426614174000') {

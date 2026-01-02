@@ -106,31 +106,18 @@ export function SyncedLyrics({ subtitles, currentTime, onSeek }: SyncedLyricsPro
                                                 display: 'inline-block',
                                                 position: 'relative',
                                                 cursor: 'pointer',
+                                                marginRight: '0.3em' // Add explicit margin for spacing
                                             }}
                                         >
-                                            {word.word}{' '}
+                                            {word.word}
                                             {hoveredWord?.word === word.word && (word.transcription || word.translation) && (
-                                                <span className="word-tooltip__content" style={{
-                                                    position: 'absolute',
-                                                    bottom: '100%',
-                                                    left: '50%',
-                                                    transform: 'translateX(-50%)',
-                                                    background: 'linear-gradient(135deg, #1e293b, #334155)',
-                                                    color: 'white',
-                                                    padding: '8px 12px',
-                                                    borderRadius: '8px',
-                                                    fontSize: '12px',
-                                                    whiteSpace: 'nowrap',
-                                                    zIndex: 100,
-                                                    boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-                                                    border: '1px solid rgba(255,255,255,0.1)',
-                                                }}>
-                                                    <div style={{ fontWeight: 'bold', marginBottom: '2px' }}>{word.word}</div>
+                                                <span className="word-tooltip__content">
+                                                    <div className="font-bold mb-0.5">{word.word}</div>
                                                     {word.transcription && (
-                                                        <div style={{ color: '#a5b4fc', fontStyle: 'italic' }}>[{word.transcription}]</div>
+                                                        <div className="text-blue-300 italic mb-0.5">[{word.transcription}]</div>
                                                     )}
                                                     {word.translation && (
-                                                        <div style={{ color: '#86efac', marginTop: '2px' }}>{word.translation}</div>
+                                                        <div className="text-green-300">{word.translation}</div>
                                                     )}
                                                 </span>
                                             )}
