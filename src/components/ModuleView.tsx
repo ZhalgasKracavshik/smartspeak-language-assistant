@@ -9,12 +9,14 @@ import GrammarSection from './GrammarSection';
 import ModuleTest from './ModuleTest';
 import ModulePractice from './ModulePractice';
 
+import PhrasalVerbsList from './PhrasalVerbsList';
+
 interface ModuleViewProps {
-    data: any;
+    data: any; // Type should be imported from page ideally, but any is acceptable here for now given existing code
 }
 
 export default function ModuleView({ data }: ModuleViewProps) {
-    const [activeTab, setActiveTab] = useState<'vocabulary' | 'grammar' | 'practice' | 'test'>('vocabulary');
+    const [activeTab, setActiveTab] = useState<'vocabulary' | 'grammar' | 'practice' | 'test' | 'materials'>('vocabulary');
     const [progress, setProgress] = useState(0);
 
     // Load progress from localStorage
@@ -126,12 +128,20 @@ export default function ModuleView({ data }: ModuleViewProps) {
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -10 }}
                             transition={{ duration: 0.2 }}
+                            className="space-y-8"
                         >
                             <VocabularyList
                                 words={data.vocabulary}
                                 moduleNumber={data.moduleNumber}
                                 onProgressUpdate={handleProgressUpdate}
                             />
+
+                            {data.phrasalVerbs && data.phrasalVerbs.length > 0 && (
+                                <>
+                                    <div className="border-t border-gray-200 dark:border-gray-700 my-6"></div>
+                                    <PhrasalVerbsList verbs={data.phrasalVerbs} />
+                                </>
+                            )}
                         </motion.div>
                     )}
 
@@ -167,7 +177,43 @@ export default function ModuleView({ data }: ModuleViewProps) {
                             exit={{ opacity: 0, y: -10 }}
                             transition={{ duration: 0.2 }}
                         >
-                            <ModuleTest vocabulary={data.vocabulary} moduleNumber={data.moduleNumber} />
+                            <ModuleTest
+                                vocabulary={data.vocabulary}
+                                moduleNumber={data.moduleNumber}
+                                practiceQuestions={data.practiceQuestions}
+                            />
+                        </motion.div>
+                    )}
+
+                    {activeTab === 'materials' && (
+                        <motion.div
+                            key="materials"
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            transition={{ duration: 0.2 }}
+                            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                        >
+                            {[
+                                { title: 'Wordlist PDF', type: 'PDF', size: '150KB', color: 'bg-red-100 text-red-600' },
+                                { title: 'Grammar Guide', type: 'DOCX', size: '45KB', color: 'bg-blue-100 text-blue-600' },
+                                { title: 'Video Lesson', type: 'MP4', size: '12MB', color: 'bg-purple-100 text-purple-600' },
+                                { title: 'Listening Task', type: 'MP3', size: '4MB', color: 'bg-green-100 text-green-600' },
+                            ].map((item, i) => (
+                                <div key={i} className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-shadow group cursor-pointer">
+                                    <div className={`w-12 h-12 ${item.color} rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
+                                        <Book className="w-6 h-6" />
+                                    </div>
+                                    <h3 className="font-bold text-gray-900 dark:text-white mb-1">{item.title}</h3>
+                                    <div className="flex items-center justify-between text-xs text-gray-500">
+                                        <span>{item.type}</span>
+                                        <span>{item.size}</span>
+                                    </div>
+                                    <button className="w-full mt-4 py-2 bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-blue-600 hover:text-white transition-colors">
+                                        Download
+                                    </button>
+                                </div>
+                            ))}
                         </motion.div>
                     )}
                 </AnimatePresence>

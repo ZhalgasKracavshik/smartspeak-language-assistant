@@ -1,114 +1,83 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import { requireAuth } from '@/middleware/auth';
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
-
-function extractPriceFromMessage(message: string): number | null {
-    // Extract numbers from user message
-    const numbers = message.match(/\d+/g);
-    if (!numbers) return null;
-
-    // Find the largest number (likely the price)
-    const prices = numbers.map(n => parseInt(n));
-    return Math.max(...prices);
-}
-
-function calculateCounterOffer(userOffer: number, currentPrice: number): number {
-    // If user offers very low (< 30% of current), reduce by 10%
-    if (userOffer < currentPrice * 0.3) {
-        return Math.max(220, Math.floor(currentPrice * 0.9));
-    }
-    // If reasonable offer (30-60%), reduce by 15%
-    else if (userOffer < currentPrice * 0.6) {
-        return Math.max(220, Math.floor(currentPrice * 0.85));
-    }
-    // If good offer (60-80%), reduce by 20%
-    else if (userOffer < currentPrice * 0.8) {
-        return Math.max(220, Math.floor(currentPrice * 0.8));
-    }
-    // If close offer (80%+), meet halfway
-    else {
-        return Math.max(220, Math.floor((currentPrice + userOffer) / 2));
-    }
-}
+import { getGeminiModel } from '@/lib/gemini';
+import { optionalAuth } from '@/middleware/auth';
 
 export async function POST(request: NextRequest) {
     try {
-        // SECURITY: Require authentication
-        const authResult = await requireAuth(request);
-        if (authResult instanceof NextResponse) {
-            return authResult;
-        }
-        const { user } = authResult;
-
         const { history, targetPrice } = await request.json();
         const lastUserMessage = history[history.length - 1].content;
         const currentPriceFromHistory = history[history.length - 2]?.price || 500;
 
-        // Try to extract user's offer
-        const userOffer = extractPriceFromMessage(lastUserMessage);
-
-        // Calculate new price based on user's offer
-        let newPrice = currentPriceFromHistory;
-        if (userOffer) {
-            if (userOffer < 100) {
-                // Too low - get offended
-                return NextResponse.json({
-                    reply: "LEAVE! $" + userOffer + "?! Are you insulting me?! This is a SILK carpet, not a doormat! GET OUT of my shop!",
-                    currentPrice: currentPriceFromHistory,
-                    dealReached: false,
-                    dealBroken: true
-                });
-            } else if (userOffer <= targetPrice) {
-                // User wins!
-                return NextResponse.json({
-                    reply: "DEAL! Okay okay, you drive a hard bargain, my friend. $" + userOffer + " it is. You are a tough negotiator!",
-                    currentPrice: userOffer,
-                    dealReached: true,
-                    dealBroken: false
-                });
-            } else {
-                // Calculate counter offer
-                newPrice = calculateCounterOffer(userOffer, currentPriceFromHistory);
-            }
-        }
-
-        const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+        const model = getGeminiModel();
 
         const prompt = `
-You are Ahmed, a dramatic carpet seller in Istanbul Grand Bazaar.
+You are Ahmed, a charismatic, dramatic, and shrewd carpet seller in the Grand Bazaar of Istanbul.
+You are selling a rare, 19th-century hand-woven silk carpet.
+Your goal is to sell it for as high a price as possible, but you are willing to negotiate if the customer is persuasive, polite, or shrewd.
 
-Current situation:
-- Your current asking price: $${currentPriceFromHistory}
-- Your NEW counter-offer: $${newPrice} (USE THIS EXACT PRICE)
-- Customer offered: $${userOffer || 'nothing specific'}
-- Customer said: "${lastUserMessage}"
+Current State:
+- Your last asking price: $${currentPriceFromHistory}
+- The user's target price (secret): $${targetPrice} (If they offer this or lower, and you accept, they win).
+- Customer says: "${lastUserMessage}"
 
 Instructions:
-1. Be emotional and dramatic: "My friend!", "You're killing me!", "I have a family!"
-2. Counter with EXACTLY $${newPrice} (say this price clearly)
-3. Make it feel like you're doing them a huge favor
-4. Keep it to 2-3 sentences max
+1. Analyze the customer's input.
+   - If they offer a price, evaluate it.
+   - If they use persuasion (flattery, pointing out flaws, walking away), typically lower your price more.
+   - If they are rude or offer an insultingly low price (e.g. under $50), you might get offended and kick them out (dealBroken).
+   - If they agree to your price, or you agree to theirs, dealReached = true.
 
-Example: "Ah, you are breaking my heart! This carpet is worth a fortune... but you seem like good person. Okay, FINAL price - $${newPrice}. This is practically robbery!"
+2. Determine your response and new price.
+   - If their offer is reasonable (e.g. > $${targetPrice}), you might accept it or counter slightly higher.
+   - If their offer is very low but they are polite, give a counter-offer.
+   - If they don't offer a price but just complain/flatter, adjust your price slightly to show goodwill (or keep it same if they are weak).
 
-Reply:`;
+3. Return ONLY a JSON object with this format:
+{
+  "reply": "Your spoken response here (be dramatic, use 'My friend!', etc.)",
+  "newPrice": number (the new asking price, or the final agreed price),
+  "dealReached": boolean (true if a price is agreed upon),
+  "dealBroken": boolean (true if you kick them out)
+}
+
+Compatibility Rules:
+- If dealReached is true, newPrice must be the final agreed amount.
+- If dealBroken is true, newPrice doesn't matter much but keep it same.
+- DO NOT use markdown formatting in the JSON.
+`;
 
         const result = await model.generateContent(prompt);
-        const reply = result.response.text().trim();
+        let textCallback = result.response.text().trim();
+
+        // Cleanup if the model wraps JSON in markdown blocks
+        textCallback = textCallback.replace(/```json/g, '').replace(/```/g, '');
+
+        let decision;
+        try {
+            decision = JSON.parse(textCallback);
+        } catch (e) {
+            console.error("Failed to parse JSON from AI:", textCallback);
+            // Fallback if AI fails to return JSON
+            decision = {
+                reply: "My friend, you drive a hard bargain! Let me think... how about $" + Math.floor(currentPriceFromHistory * 0.95) + "?",
+                newPrice: Math.floor(currentPriceFromHistory * 0.95),
+                dealReached: false,
+                dealBroken: false
+            };
+        }
 
         return NextResponse.json({
-            reply: reply,
-            currentPrice: newPrice,
-            dealReached: false,
-            dealBroken: false
+            reply: decision.reply,
+            currentPrice: decision.newPrice,
+            dealReached: decision.dealReached,
+            dealBroken: decision.dealBroken
         });
+
     } catch (error) {
         console.error('Negotiation AI error:', error);
         return NextResponse.json({
-            reply: "I didn't quite catch that, my friend. Make me an offer!",
-            currentPrice: 500,
+            reply: "I didn't quite catch that, my friend. Speak up! The market is noisy!",
+            currentPrice: 500, // Should probably ideally persist previous price, but this is error fallback
             dealReached: false,
             dealBroken: false
         });

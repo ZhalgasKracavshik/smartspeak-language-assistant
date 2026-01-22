@@ -53,119 +53,118 @@ export default function AdminUploadPage() {
         setUploading(true);
         setProgress([]);
 
-        for (let i = 0; i < forms.length; i++) {
-            const form = forms[i];
-
-            try {
-                setProgress(prev => [...prev, `📤 [${i + 1}/${forms.length}] Uploading ${form.title}...`]);
-
-                if (!form.file) {
-                    setProgress(prev => [...prev, `❌ [${i + 1}] No file selected for ${form.title}`]);
+        try {
+            for (let i = 0; i < forms.length; i++) {
+                const form = forms[i];
+                // Check valid form
+                if (!form.file || !form.title) {
+                    setProgress(prev => [...prev, `⚠️ [${i + 1}] Check skipped: Missing file or title for form ${i + 1}`]);
                     continue;
                 }
 
-                // 1. Upload to Cloudinary
-                const cloudinaryResult = await uploadToCloudinary(form.file, form.type);
+                try {
+                    setProgress(prev => [...prev, `📤 [${i + 1}/${forms.length}] Uploading ${form.title}...`]);
 
-                setProgress(prev => [...prev, `✅ [${i + 1}] Uploaded to Cloudinary: ${form.title}`]);
-
-                // 2. Handle Subtitles (AI or File)
-                let subtitles: any[] = [];
-
-                if (form.useAI && !form.subtitleFile) {
-                    // Use AI transcription
-                    setProgress(prev => [...prev, `🤖 [${i + 1}] Generating AI subtitles...`]);
-
-                    try {
-                        const transcribeResponse = await fetch('/api/transcribe', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                mediaUrl: cloudinaryResult.secure_url,
-                                duration: cloudinaryResult.duration || 0,
-                            }),
-                        });
-
-                        if (transcribeResponse.ok) {
-                            const data = await transcribeResponse.json();
-                            subtitles = data.subtitles || [];
-                            setProgress(prev => [...prev, `✨ [${i + 1}] AI generated ${subtitles.length} subtitle lines!`]);
-                        } else {
-                            const errData = await transcribeResponse.json();
-                            setProgress(prev => [...prev, `⚠️ [${i + 1}] AI transcription failed: ${errData.error || 'Unknown error'}`]);
-                        }
-                    } catch (err) {
-                        console.error('AI Transcription error:', err);
-                        setProgress(prev => [...prev, `⚠️ [${i + 1}] AI transcription error`]);
+                    // 1. Upload to Cloudinary
+                    const cloudinaryResult = await uploadToCloudinary(form.file, form.type);
+                    if (!cloudinaryResult || !cloudinaryResult.secure_url) {
+                        throw new Error(`Cloudinary upload failed for ${form.title}`);
                     }
-                } else if (form.subtitleFile) {
-                    // Use uploaded SRT file
-                    try {
+                    setProgress(prev => [...prev, `✅ [${i + 1}] Uploaded to Cloudinary`]);
+
+                    // 2. Handle Subtitles (AI or File)
+                    let subtitles: any[] = [];
+                    // ... AI logic handled inside inner try/catch blocks ...
+
+                    if (form.useAI && !form.subtitleFile) {
+                        // Use AI transcription
+                        setProgress(prev => [...prev, `🤖 [${i + 1}] Generating AI subtitles...`]);
+
+                        try {
+                            const transcribeResponse = await fetch('/api/transcribe', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    mediaUrl: cloudinaryResult.secure_url,
+                                    duration: cloudinaryResult.duration || 0,
+                                }),
+                            });
+
+                            if (transcribeResponse.ok) {
+                                const data = await transcribeResponse.json();
+                                subtitles = data.subtitles || [];
+                                setProgress(prev => [...prev, `✨ [${i + 1}] AI generated ${subtitles.length} lines!`]);
+                            } else {
+                                const errData = await transcribeResponse.json();
+                                setProgress(prev => [...prev, `⚠️ [${i + 1}] AI transcription failed: ${errData.error}`]);
+                            }
+                        } catch (err) {
+                            console.error('AI Transcription error:', err);
+                            setProgress(prev => [...prev, `⚠️ [${i + 1}] AI transcription error`]);
+                        }
+                    } else if (form.subtitleFile) {
+                        // ... SRT logic ...
                         const subtitleText = await form.subtitleFile.text();
                         const transcribeResponse = await fetch('/api/transcribe', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
                                 mediaUrl: cloudinaryResult.secure_url,
-                                duration: cloudinaryResult.duration || 0,
                                 srtContent: subtitleText,
                             }),
                         });
-
                         if (transcribeResponse.ok) {
                             const data = await transcribeResponse.json();
                             subtitles = data.subtitles || [];
-                            setProgress(prev => [...prev, `📝 [${i + 1}] Parsed ${subtitles.length} subtitle lines from SRT`]);
                         }
-                    } catch (err) {
-                        console.error('SRT parsing error:', err);
-                        setProgress(prev => [...prev, `⚠️ [${i + 1}] SRT parsing error`]);
                     }
+
+                    // 3. Create media entry
+                    const mediaData = {
+                        title: form.title,
+                        description: form.description,
+                        type: form.type,
+                        cloudinary_id: cloudinaryResult.public_id,
+                        cloudinary_url: cloudinaryResult.secure_url,
+                        thumbnail_url: cloudinaryResult.thumbnail_url,
+                        duration: cloudinaryResult.duration || 0,
+                        difficulty: form.difficulty,
+                        category: form.category,
+                        tags: form.tags.split(',').map(t => t.trim()).filter(Boolean),
+                    };
+
+                    const response = await fetch('/api/media', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(mediaData),
+                    });
+
+                    if (!response.ok) {
+                        const err = await response.json();
+                        throw new Error(err.error || 'Database insert failed');
+                    }
+
+                    const createdMedia = await response.json();
+
+                    // 4. Save Subtitles
+                    if (subtitles.length > 0) {
+                        await createSubtitles(createdMedia.id, subtitles);
+                    }
+
+                    setProgress(prev => [...prev, `🎉 [${i + 1}] Success: ${form.title}`]);
+
+                } catch (error) {
+                    console.error('Upload item error:', error);
+                    setProgress(prev => [...prev, `❌ [${i + 1}] FAILED: ${error instanceof Error ? error.message : 'Unknown error'}`]);
                 }
-
-                // 3. Create media entry in database
-                const mediaData = {
-                    title: form.title,
-                    description: form.description,
-                    type: form.type,
-                    cloudinary_id: cloudinaryResult.public_id,
-                    cloudinary_url: cloudinaryResult.secure_url,
-                    thumbnail_url: cloudinaryResult.thumbnail_url,
-                    duration: cloudinaryResult.duration || 0,
-                    difficulty: form.difficulty,
-                    category: form.category,
-                    tags: form.tags.split(',').map(t => t.trim()).filter(Boolean),
-                };
-
-                const response = await fetch('/api/media', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(mediaData),
-                });
-
-                if (!response.ok) {
-                    throw new Error('Failed to create media entry');
-                }
-
-                const createdMedia = await response.json();
-                setProgress(prev => [...prev, `✅ [${i + 1}] Created media entry: ${form.title}`]);
-
-                // 4. Add subtitles to database
-                if (subtitles.length > 0) {
-                    await createSubtitles(createdMedia.id, subtitles);
-                    setProgress(prev => [...prev, `✅ [${i + 1}] Saved subtitles for ${form.title}`]);
-                }
-
-                setProgress(prev => [...prev, `🎉 [${i + 1}/${forms.length}] Complete: ${form.title}`]);
-
-            } catch (error) {
-                console.error('Upload error:', error);
-                setProgress(prev => [...prev, `❌ [${i + 1}] Error: ${error instanceof Error ? error.message : 'Unknown error'}`]);
             }
+        } catch (globalError) {
+            console.error('Global upload error:', globalError);
+            setProgress(prev => [...prev, '🔥 Critical Error in upload process']);
+        } finally {
+            setUploading(false); // CRITICAL: Always reset loading state
+            setProgress(prev => [...prev, '🏁 Process Finished']);
         }
-
-        setUploading(false);
-        setProgress(prev => [...prev, '🎊 All uploads complete!']);
     };
 
     return (

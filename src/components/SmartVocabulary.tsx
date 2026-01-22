@@ -16,6 +16,7 @@ import { getUserProfileService } from '../services/userProfileService';
 import { SentenceBuilder } from './games/SentenceBuilder';
 import { InterestService, InterestTopic } from '../services/InterestService';
 import { contentService, VocabularyWord as DbWord } from '../services/contentService';
+import { MEDICAL_TERMS } from '../data/medical_terms';
 
 // Define the interface here used by the component (matches the legacy structure)
 export interface Word {
@@ -40,82 +41,101 @@ export function SmartVocabulary() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLevel, setSelectedLevel] = useState<string>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [showMedicalOnly, setShowMedicalOnly] = useState(false);
   const [savedWords, setSavedWords] = useState<Set<string>>(new Set());
   const [customWords, setCustomWords] = useState<Word[]>([]);
   const [dbWords, setDbWords] = useState<Word[]>([]);
   const [isLoadingDb, setIsLoadingDb] = useState(true);
-
   const [isGenerating, setIsGenerating] = useState(false);
-  const [testMode, setTestMode] = useState(false);
-  const [reviewMode, setReviewMode] = useState(false);
+  const [testItems, setTestItems] = useState<Array<{ type: 'translation' | 'sentence', word: Word }>>([]);
   const [currentTestIndex, setCurrentTestIndex] = useState(0);
   const [testScore, setTestScore] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
-  const [viewMode, setViewMode] = useState<'list' | 'flashcards'>('list');
+  const [testMode, setTestMode] = useState(false);
+  const [reviewMode, setReviewMode] = useState(false);
   const [flippedCards, setFlippedCards] = useState<Set<string>>(new Set());
+  const [viewMode, setViewMode] = useState<'flashcards' | 'list'>('flashcards');
+
+  // ... (existing state)
   const [dueWords, setDueWords] = useState<Word[]>([]);
 
-  // Load saved words and custom words
+  // Load vocabulary from database
   useEffect(() => {
-    const saved = localStorage.getItem('smartspeak_saved_words');
-    if (saved) {
-      setSavedWords(new Set(JSON.parse(saved)));
-    }
-
-    const custom = localStorage.getItem('smartspeak_custom_words');
-    if (custom) {
-      setCustomWords(JSON.parse(custom));
-    }
-
-    // Fetch from DB
-    const fetchVocab = async () => {
+    const loadVocabulary = async () => {
       try {
-        const rawData = await contentService.getAllVocabulary();
-        // Transform DB shape to component shape
-        const transformed: Word[] = rawData.map(w => ({
-          id: w.id,
-          word: w.word,
+        setIsLoadingDb(true);
+        const dbVocab: DbWord[] = await contentService.getAllVocabulary();
+
+        // Transform DbWord to Word format
+        const transformed: Word[] = dbVocab.map(dbWord => ({
+          id: dbWord.id,
+          word: dbWord.word,
           translation: {
-            kz: w.translation_kz || '',
-            ru: w.translation_ru || ''
+            kz: dbWord.translation_kz || dbWord.translation_ru || '',
+            ru: dbWord.translation_ru || ''
           },
-          transcription: w.transcription || '',
-          level: w.level || 'A1',
-          category: w.category || 'General',
-          example: w.example_sentence,
+          transcription: '',
+          level: 'A1',
+          category: 'General',
+          example: '',
           exampleTranslation: {
-            kz: w.example_translation_kz || '',
-            ru: w.example_translation_ru || ''
+            kz: '',
+            ru: ''
           }
         }));
+
         setDbWords(transformed);
-      } catch (e) {
-        console.error(e);
+      } catch (error) {
+        console.error('Failed to load vocabulary:', error);
       } finally {
         setIsLoadingDb(false);
       }
     };
-    fetchVocab();
 
+    loadVocabulary();
   }, []);
 
-  // Update due words when dbWords changes
+  const allWords = useMemo(() => {
+    let baseWords = [...dbWords, ...customWords];
+
+    // Transform Medical Terms
+    const medicalWords: Word[] = MEDICAL_TERMS.map(m => ({
+      id: `med_${m.id}`,
+      word: m.term,
+      translation: {
+        kz: m.definition, // Using definition as translation for now
+        ru: m.definition
+      },
+      transcription: m.latin,
+      level: 'B2', // Default level for medical terms
+      category: 'Medical',
+      example: m.example,
+      exampleTranslation: {
+        kz: m.definition,
+        ru: m.definition
+      }
+    }));
+
+    const combined = [...baseWords, ...medicalWords];
+
+    // Remove duplicates based on the word itself (case-insensitive, trimmed)
+    const seen = new Set();
+    return combined.filter(item => {
+      const cleanWord = item.word.trim().toLowerCase();
+      if (!cleanWord || seen.has(cleanWord)) {
+        return false;
+      }
+      seen.add(cleanWord);
+      return true;
+    });
+  }, [dbWords, customWords]);
+
+  // Refresh due words when allWords or savedWords change
   useEffect(() => {
-    if (dbWords.length > 0) {
+    if (allWords.length > 0) {
       refreshDueWords();
     }
-  }, [dbWords, savedWords]);
-
-  // Save words to local storage
-  useEffect(() => {
-    localStorage.setItem('smartspeak_saved_words', JSON.stringify(Array.from(savedWords)));
-    localStorage.setItem('smartspeak_custom_words', JSON.stringify(customWords));
-    refreshDueWords();
-  }, [savedWords, customWords]);
-
-  const allWords = useMemo(() => {
-    return [...dbWords, ...customWords];
-  }, [dbWords, customWords]);
+  }, [allWords, savedWords]);
 
   const refreshDueWords = () => {
     // Need to wait for allWords to be populated
@@ -227,7 +247,7 @@ export function SmartVocabulary() {
     });
   };
 
-  const [testItems, setTestItems] = useState<Array<{ type: 'translation' | 'sentence', word: Word }>>([]);
+
 
   const startTest = (isReview: boolean = false) => {
     const wordsToTest = isReview ? dueWords : allWords.filter(w => savedWords.has(w.id));
@@ -565,14 +585,6 @@ export function SmartVocabulary() {
               : 'Изучайте новые слова и повторяйте пройденные'}
           </p>
         </div>
-        <Button
-          onClick={handleGenerateWords}
-          disabled={isGenerating}
-          className="bg-gradient-to-r from-pink-500 to-purple-500 text-white border-0 shadow-lg hover:shadow-xl transition-all"
-        >
-          {isGenerating ? <Loader2 className="animate-spin mr-2" /> : <Sparkles className="mr-2" />}
-          {language === 'kz' ? 'AI Сөздер жасау' : 'Создать слова (AI)'}
-        </Button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">

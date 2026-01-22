@@ -25,8 +25,8 @@ let currentKeyIndex = 0;
 
 const getNextKey = () => {
     if (API_KEYS.length === 0) throw new Error('No Gemini API keys found');
+    currentKeyIndex = Math.floor(Math.random() * API_KEYS.length);
     const key = API_KEYS[currentKeyIndex];
-    currentKeyIndex = (currentKeyIndex + 1) % API_KEYS.length;
     return key;
 };
 

@@ -4,6 +4,7 @@ import React from 'react';
 import { usePathname } from 'next/navigation';
 import { Sidebar } from './Sidebar';
 import { MobileNav } from './MobileNav';
+import { FloatingMobileMenu } from './FloatingMobileMenu';
 import { ChevronRight } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -54,8 +55,8 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
             </main>
 
             <MobileNav />
+            <FloatingMobileMenu />
             <footer className="hidden md:block fixed bottom-0 right-0 p-2 text-xs text-gray-400 bg-white/80 backdrop-blur-sm rounded-tl-lg pointer-events-none z-50">
-                v1.0.1 (Deployed)
             </footer>
         </div>
     );

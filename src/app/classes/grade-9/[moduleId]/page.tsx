@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { notFound } from 'next/navigation';
 import ModuleView from '@/components/ModuleView';
-import { contentService, Module, VocabularyWord, GrammarTopic } from '@/services/contentService';
+import { contentService, Module, VocabularyWord, GrammarTopic, PhrasalVerb, PracticeQuestion } from '@/services/contentService';
 
 interface ModuleData {
     moduleNumber: number;
@@ -11,6 +11,8 @@ interface ModuleData {
     description: string;
     vocabulary: VocabularyWord[];
     grammar: GrammarTopic[];
+    phrasalVerbs: PhrasalVerb[];
+    practiceQuestions: PracticeQuestion[];
 }
 
 export default function ModulePage({ params }: { params: { moduleId: string } }) {
@@ -39,10 +41,12 @@ export default function ModulePage({ params }: { params: { moduleId: string } })
 
         const fetchData = async () => {
             try {
-                const [mod, vocab, grammar] = await Promise.all([
+                const [mod, vocab, grammar, phrasalVerbs, questions] = await Promise.all([
                     contentService.getModuleById(id),
                     contentService.getModuleVocabulary(id),
-                    contentService.getModuleGrammar(id)
+                    contentService.getModuleGrammar(id),
+                    contentService.getModulePhrasalVerbs(id),
+                    contentService.getModulePracticeQuestions(id)
                 ]);
 
                 if (!mod) {
@@ -53,7 +57,9 @@ export default function ModulePage({ params }: { params: { moduleId: string } })
                         title: mod.title,
                         description: mod.description,
                         vocabulary: vocab,
-                        grammar: grammar
+                        grammar: grammar,
+                        phrasalVerbs: phrasalVerbs,
+                        practiceQuestions: questions
                     });
                 }
             } catch (err) {

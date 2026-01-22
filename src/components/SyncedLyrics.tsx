@@ -49,11 +49,15 @@ export function SyncedLyrics({ subtitles, currentTime, onSeek }: SyncedLyricsPro
 
     // Auto-scroll to active line
     useEffect(() => {
-        if (activeLineRef.current && containerRef.current) {
-            activeLineRef.current.scrollIntoView({
-                behavior: 'smooth',
-                block: 'center',
-            });
+        if (activeLineRef.current) {
+            // Slight delay to ensure DOM is updated and layout is settled
+            const timeoutId = setTimeout(() => {
+                activeLineRef.current?.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center',
+                });
+            }, 100);
+            return () => clearTimeout(timeoutId);
         }
     }, [activeSubtitleIndex]);
 
@@ -72,7 +76,18 @@ export function SyncedLyrics({ subtitles, currentTime, onSeek }: SyncedLyricsPro
     }
 
     return (
-        <div className="synced-lyrics" ref={containerRef}>
+        <div
+            className="synced-lyrics"
+            ref={containerRef}
+            style={{
+                height: '100%',
+                overflowY: 'auto',
+                position: 'relative',
+                scrollBehavior: 'smooth',
+                paddingTop: '40%', // Allow first line to be centered
+                paddingBottom: '40%' // Allow last line to be centered
+            }}
+        >
             <AnimatePresence>
                 {subtitles.map((subtitle, index) => {
                     const isActive = index === activeSubtitleIndex;

@@ -1,15 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getGeminiModel } from '@/lib/gemini';
-import { requireAuth } from '@/middleware/auth';
+import { optionalAuth } from '@/middleware/auth';
 
 export async function POST(request: NextRequest) {
     try {
-        // SECURITY: Require authentication
-        const authResult = await requireAuth(request);
-        if (authResult instanceof NextResponse) {
-            return authResult;
-        }
-        const { user } = authResult;
+        // SECURITY: Optional authentication (allows guests)
+        const authResult = await optionalAuth(request);
+        const user = authResult?.user;
 
         const { topic, history, userArgument } = await request.json();
 
@@ -38,9 +35,13 @@ export async function POST(request: NextRequest) {
         const result = await model.generateContent(prompt);
         const responseText = result.response.text();
 
-        // Clean up markdown code blocks if present
-        const jsonStr = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
-        const data = JSON.parse(jsonStr);
+        // More robust JSON extraction
+        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) {
+            throw new Error('AI did not return valid JSON');
+        }
+
+        const data = JSON.parse(jsonMatch[0]);
 
         return NextResponse.json(data);
     } catch (error) {

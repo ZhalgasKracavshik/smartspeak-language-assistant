@@ -24,6 +24,8 @@ export default function NegotiatorPage() {
     const [loading, setLoading] = useState(false);
     const [gameState, setGameState] = useState<'playing' | 'won' | 'lost'>('playing');
     const [micStatus, setMicStatus] = useState<'idle' | 'listening' | 'error'>('idle');
+    const [autoSpeak, setAutoSpeak] = useState(true); // TTS toggle
+    const [isSpeaking, setIsSpeaking] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     const scrollToBottom = () => {
@@ -59,14 +61,20 @@ export default function NegotiatorPage() {
 
             const data = await response.json();
 
+            const cleanReply = data.reply.replace(/\*\*/g, ''); // Remove bold markdown
             const assistantMsg: Message = {
                 id: (Date.now() + 1).toString(),
                 role: 'assistant',
-                content: data.reply,
+                content: cleanReply,
                 price: data.currentPrice
             };
 
             setMessages(prev => [...prev, assistantMsg]);
+
+            // Auto-speak merchant's response
+            if (autoSpeak && cleanReply) {
+                speakText(cleanReply);
+            }
 
             if (data.dealReached) {
                 setGameState('won');
@@ -81,7 +89,40 @@ export default function NegotiatorPage() {
         }
     };
 
+    // ... (keep speech recognition existing code) ...
+    // Note: I need to use `replace_file_content` carefully. 
+    // I can't see the speech recognition code inside my replacement content if I strictly replace handleSend and the return.
+    // I will target the `handleSend` function first, then the Return statement in a separate call or large block?
+    // The previous view_file showed lines 37-82 for handleSend.
+    // And 151-245 for Return.
+    // I will do two edits or one large edit.
+    // Let's do the handleSend edit first.
+
+
     // Speech recognition with improved error handling
+    const speakText = (text: string) => {
+        if ('speechSynthesis' in window) {
+            // Cancel any ongoing speech
+            window.speechSynthesis.cancel();
+            setIsSpeaking(true);
+
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'en-US';
+            utterance.rate = 0.9; // Slightly slower for clarity
+            utterance.pitch = 1.0;
+
+            utterance.onend = () => {
+                setIsSpeaking(false);
+            };
+
+            utterance.onerror = () => {
+                setIsSpeaking(false);
+            };
+
+            window.speechSynthesis.speak(utterance);
+        }
+    };
+
     const toggleRecording = () => {
         // Check for Speech Recognition API support
         const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
@@ -157,26 +198,21 @@ export default function NegotiatorPage() {
                     <div className="goal-badge">
                         Target: Buy for under $250
                     </div>
+                    <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem', justifyContent: 'center', alignItems: 'center' }}>
+                        <label style={{ fontSize: '0.875rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <input
+                                type="checkbox"
+                                checked={autoSpeak}
+                                onChange={(e) => setAutoSpeak(e.target.checked)}
+                                style={{ cursor: 'pointer' }}
+                            />
+                            🔊 Auto-Speak (Merchant talks)
+                        </label>
+                        {isSpeaking && <span style={{ fontSize: '0.875rem', color: '#10b981' }}>🗣️ Speaking...</span>}
+                    </div>
                 </div>
 
-                {/* Hint Panel */}
-                <div className="hint-panel" style={{
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    color: 'white',
-                    padding: '12px 16px',
-                    borderRadius: '12px',
-                    margin: '12px 0',
-                    fontSize: '13px',
-                    lineHeight: '1.5'
-                }}>
-                    <strong>💡 Negotiation Tips:</strong>
-                    <ul style={{ margin: '8px 0 0 20px', padding: 0 }}>
-                        <li>Start low: "How about $150?"</li>
-                        <li>Complain: "That's too expensive!"</li>
-                        <li>Walk away: "I'll look elsewhere..."</li>
-                        <li>Flatter: "You seem like a fair person"</li>
-                    </ul>
-                </div>
+
 
                 <div className="chat-window">
                     {messages.map((msg) => (
@@ -201,42 +237,59 @@ export default function NegotiatorPage() {
                     <div ref={messagesEndRef} />
                 </div>
 
-                {gameState === 'playing' ? (
-                    <div className="input-area">
-                        <button
-                            className={`btn-mic ${isRecording ? 'recording' : ''}`}
-                            onClick={toggleRecording}
-                            title={micStatus === 'error' ? 'Microphone Error' : 'Click to Speak'}
-                        >
-                            {isRecording ? '🛑' : '🎤'}
-                        </button>
-                        <input
-                            type="text"
-                            value={input}
-                            onChange={(e) => setInput(e.target.value)}
-                            onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-                            placeholder="Type or speak your offer..."
-                            disabled={loading}
-                        />
-                        <button
-                            className="btn-send"
-                            onClick={handleSend}
-                            disabled={loading || !input.trim()}
-                        >
-                            Send
-                        </button>
-                    </div>
-                ) : (
-                    <div className={`game-over ${gameState}`}>
-                        <h2>{gameState === 'won' ? '🎉 DEAL ACCEPTED!' : '🚪 GET OUT!'}</h2>
-                        <p>
-                            {gameState === 'won'
-                                ? "You are a master negotiator! You saved a lot of money."
-                                : "The merchant got offended and kicked you out."}
-                        </p>
-                        <button onClick={() => window.location.reload()} className="btn-restart">
-                            Try Again
-                        </button>
+                <div className="input-area">
+                    <button
+                        className={`btn-mic ${isRecording ? 'recording' : ''}`}
+                        onClick={toggleRecording}
+                        title={micStatus === 'error' ? 'Microphone Error' : 'Click to Speak'}
+                        disabled={gameState !== 'playing'}
+                    >
+                        {isRecording ? '🛑' : '🎤'}
+                    </button>
+                    <input
+                        type="text"
+                        value={input}
+                        onChange={(e) => setInput(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && handleSend()}
+                        placeholder={gameState === 'playing' ? "Type or speak your offer..." : "Game Over"}
+                        disabled={loading || gameState !== 'playing'}
+                    />
+                    <button
+                        className="btn-send"
+                        onClick={handleSend}
+                        disabled={loading || !input.trim() || gameState !== 'playing'}
+                    >
+                        Send
+                    </button>
+                </div>
+
+                {gameState !== 'playing' && (
+                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-300">
+                        <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-2xl p-8 max-w-md w-full text-center transform scale-100 transition-all border border-white/10 relative overflow-hidden">
+                            <div className={`absolute top-0 left-0 w-full h-2 ${gameState === 'won' ? 'bg-green-500' : 'bg-red-500'}`} />
+
+                            <div className="mb-6 text-6xl">
+                                {gameState === 'won' ? '🎉' : '🚪'}
+                            </div>
+
+                            <h2 className={`text-3xl font-bold mb-4 ${gameState === 'won' ? 'text-green-600' : 'text-red-500'}`}>
+                                {gameState === 'won' ? 'DEAL ACCEPTED!' : 'GET OUT!'}
+                            </h2>
+
+                            <p className="text-gray-600 dark:text-gray-300 text-lg mb-8 leading-relaxed">
+                                {gameState === 'won'
+                                    ? "You are a master negotiator! You saved a lot of money and the merchant respects you."
+                                    : "The merchant got offended by your offer and kicked you out of the shop!"}
+                            </p>
+
+                            <button
+                                onClick={() => window.location.reload()}
+                                className={`w-full py-4 rounded-xl font-bold text-white shadow-lg transform transition-transform hover:scale-105 active:scale-95 ${gameState === 'won' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'
+                                    }`}
+                            >
+                                Try Again
+                            </button>
+                        </div>
                     </div>
                 )}
             </div>

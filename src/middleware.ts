@@ -1,52 +1,96 @@
-import { type NextRequest } from 'next/server'
-import { updateSession } from '@/utils/supabase/middleware'
+import { type NextRequest, NextResponse } from 'next/server';
+import { createServerClient, type CookieOptions } from '@supabase/ssr';
 
 export async function middleware(request: NextRequest) {
-    // 1. Update Session (handles auth cookies)
-    // This is critical for Server Components and API routes to work with Supabase Auth
-    const response = await updateSession(request)
+    // Check if request is for admin routes
+    if (request.nextUrl.pathname.startsWith('/admin')) {
+        let response = NextResponse.next({
+            request: {
+                headers: request.headers,
+            },
+        });
 
-    // 2. Security Headers
-    response.headers.set('X-DNS-Prefetch-Control', 'on')
-    response.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload')
-    response.headers.set('X-Frame-Options', 'SAMEORIGIN')
-    response.headers.set('X-Content-Type-Options', 'nosniff')
-    response.headers.set('X-XSS-Protection', '1; mode=block')
-    response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
-    response.headers.set('Permissions-Policy', 'camera=(), microphone=(self), geolocation=()')
+        const supabase = createServerClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+            {
+                cookies: {
+                    get(name: string) {
+                        return request.cookies.get(name)?.value;
+                    },
+                    set(name: string, value: string, options: CookieOptions) {
+                        request.cookies.set({
+                            name,
+                            value,
+                            ...options,
+                        });
+                        response = NextResponse.next({
+                            request: {
+                                headers: request.headers,
+                            },
+                        });
+                        response.cookies.set({
+                            name,
+                            value,
+                            ...options,
+                        });
+                    },
+                    remove(name: string, options: CookieOptions) {
+                        request.cookies.set({
+                            name,
+                            value: '',
+                            ...options,
+                        });
+                        response = NextResponse.next({
+                            request: {
+                                headers: request.headers,
+                            },
+                        });
+                        response.cookies.set({
+                            name,
+                            value: '',
+                            ...options,
+                        });
+                    },
+                },
+            }
+        );
 
-    // Content Security Policy
-    const cspHeader = `
-    default-src 'self';
-    script-src 'self' 'unsafe-eval' 'unsafe-inline' https://accounts.google.com https://www.youtube.com https://s.ytimg.com;
-    style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
-    img-src 'self' data: https: blob: https://res.cloudinary.com https://img.youtube.com;
-    media-src 'self' https://res.cloudinary.com;
-    font-src 'self' https://fonts.gstatic.com;
-    connect-src 'self' https://*.supabase.co https://accounts.google.com https://oauth2.googleapis.com https://www.googleapis.com https://generativelanguage.googleapis.com https://youtube-transcript-api.vercel.app https://res.cloudinary.com;
-    frame-src 'self' https://accounts.google.com https://www.youtube.com https://open.spotify.com;
-    object-src 'none';
-    base-uri 'self';
-    form-action 'self';
-    frame-ancestors 'none';
-    upgrade-insecure-requests;
-  `.replace(/\s{2,}/g, ' ').trim()
+        const { data: { session } } = await supabase.auth.getSession();
 
-    response.headers.set('Content-Security-Policy', cspHeader)
+        // 1. Check if user is authenticated
+        if (!session) {
+            const redirectUrl = request.nextUrl.clone();
+            redirectUrl.pathname = '/login';
+            redirectUrl.searchParams.set('redirectedFrom', request.nextUrl.pathname);
+            return NextResponse.redirect(redirectUrl);
+        }
 
-    return response
+        // 2. Check if user has admin role
+        // Fetch profile role. Note: This adds a DB read per request. 
+        // Optimization: In production, consider using Custom Claims in JWT to avoid this DB hit.
+        // For now, robust DB check is safer.
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', session.user.id)
+            .single();
+
+        if (!profile || profile.role !== 'admin') {
+            // Unauthorized - Redirect to home or 403 page
+            const redirectUrl = request.nextUrl.clone();
+            // Redirect to home as a safe default for non-admins trying to access admin
+            redirectUrl.pathname = '/';
+            return NextResponse.redirect(redirectUrl);
+        }
+    }
+
+    return NextResponse.next();
 }
 
 export const config = {
     matcher: [
-        /*
-         * Match all request paths except:
-         * - _next/static (static files)
-         * - _next/image (image optimization files)
-         * - favicon.ico (favicon file)
-         * - public files (public folder)
-         * - api/debug-env (debug endpoint)
-         */
-        '/((?!_next/static|_next/image|favicon.ico|api/debug-env|api/debug-models|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+        '/admin/:path*',
+        // Add other protected routes here if needed
     ],
-}
+};

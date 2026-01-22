@@ -85,5 +85,32 @@ alter table daily_quests enable row level security;
 create policy "Users can view own daily quests." on daily_quests
   for select using (auth.uid() = user_id);
 
-create policy "Users can update own daily quests." on daily_quests
   for all using (auth.uid() = user_id);
+
+-- Quests Definitions (Admin Managed)
+create table quests (
+  id uuid default uuid_generate_v4() primary key,
+  title text not null,
+  description text,
+  xp_reward integer default 10,
+  target_count integer default 1,
+  type text check (type in ('vocabulary', 'grammar', 'speech', 'dialogue', 'mixed')) default 'mixed',
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- RLS for Quests
+alter table quests enable row level security;
+create policy "Everyone can view quests." on quests for select using (true);
+-- Admin only policy will be handled by generic admin policy or specific one
+-- create policy "Admins can manage quests" on quests for all using (auth.uid() in (select id from profiles where role = 'admin'));
+
+-- ROLES & ADMIN ACCESS
+-- Add role to profiles if not exists (handled via migration in prod, but documented here)
+-- alter table profiles add column if not exists role text check (role in ('user', 'admin', 'teacher')) default 'user';
+
+-- Create Admin Policies (Generic example, apply to specific content tables as needed)
+-- Example: Allow admins to insert/update content
+-- create policy "Admins can do everything on content" on some_content_table
+--   for all using (
+--     auth.uid() in (select id from profiles where role = 'admin')
+--   );

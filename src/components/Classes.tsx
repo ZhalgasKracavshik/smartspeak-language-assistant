@@ -43,6 +43,22 @@ interface ModuleProgress {
     markedComplete: boolean;
 }
 
+const getModuleImage = (title: string) => {
+    const images: Record<string, string> = {
+        'Hobbies': '1461906477615-dfd40b1e0c24',
+        'Sport': '1461896836934-ffe607ba8211',
+        'Earth': '1542223175-75829c568ed7',
+        'Charities': '1559027615-cd7667ef70ff',
+        'Traditions': '1520101511116-646b14643037',
+        'Music': '1511671782779-c97d3d27a1d4',
+        'Travel': '1476514525535-07fb3b4ae5f1',
+        'History': '1447069387593-a5de0862481e',
+        'Science': '1518770660439-4636190af475'
+    };
+    const id = Object.entries(images).find(([k]) => title.includes(k))?.[1] || '1454165833222-d293d0b13d23';
+    return `https://images.unsplash.com/photo-${id}?w=800&auto=format&fit=crop&q=80`;
+};
+
 export function Classes() {
     const { language } = useLanguage();
     const [selectedGrade, setSelectedGrade] = useState<string>('9');
@@ -55,6 +71,8 @@ export function Classes() {
 
     const grades = ['5', '6', '7', '8', '9'];
 
+    const [moduleStats, setModuleStats] = useState<Record<number, { totalWords: number; startCount: number; learnedCount: number; masteredCount: number }>>({});
+
     useEffect(() => {
         // Load progress from localStorage for Grade 9
         const saved = localStorage.getItem('grade9-progress');
@@ -62,35 +80,37 @@ export function Classes() {
             setProgress(JSON.parse(saved));
         }
 
-        // Fetch Grade 9 modules
-        const fetchModules = async () => {
+        // Fetch Grade 9 modules and stats
+        const fetchData = async () => {
             try {
                 setIsLoading(true);
-                const modules = await contentService.getModules();
+                const [modules, stats] = await Promise.all([
+                    contentService.getModules(),
+                    contentService.getModuleStats()
+                ]);
+
                 if (modules.length === 0) {
                     console.warn('No modules found in DB');
-                    // Could set error here if we expect modules to always exist
                 }
                 setGrade9Modules(modules);
+                setModuleStats(stats);
                 setFetchError(null);
             } catch (err) {
-                console.error('Failed to fetch modules:', err);
+                console.error('Failed to fetch data:', err);
                 setFetchError('Failed to load modules. Please refresh.');
             } finally {
                 setIsLoading(false);
             }
         };
-        fetchModules();
+        fetchData();
     }, []);
 
     const getModuleProgress = (moduleId: number) => {
-        const moduleProgress = progress[moduleId];
-        if (!moduleProgress) return 0;
+        const stats = moduleStats[moduleId];
+        if (!stats || stats.totalWords === 0) return 0;
 
-        // Approx logic for progress bar
-        if (moduleProgress.markedComplete) return 100;
-        const learned = moduleProgress.wordsLearned?.length || 0;
-        return Math.min(Math.round((learned / 20) * 100), 99);
+        // Progress based on words learned
+        return Math.min(Math.round(((stats.learnedCount + stats.masteredCount) / stats.totalWords) * 100), 100);
     };
 
     const translations = {
@@ -200,8 +220,9 @@ export function Classes() {
                 {/* Modules Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {grade9Modules.map((module, index) => {
+                        const stats = moduleStats[module.id] || { totalWords: 0, learnedCount: 0, masteredCount: 0 };
                         const progressPercent = getModuleProgress(module.id);
-                        const isCompleted = progress[module.id]?.markedComplete;
+                        const isCompleted = progressPercent === 100;
                         const testScore = progress[module.id]?.testScore;
 
                         return (
@@ -212,18 +233,16 @@ export function Classes() {
                                 transition={{ delay: index * 0.1 }}
                             >
                                 <Link href={`/classes/grade-9/${module.id}`}>
-                                    <Card className="group hover:shadow-2xl transition-all duration-300 cursor-pointer border-2 border-transparent hover:border-blue-300 relative overflow-hidden h-full">
-                                        {/* Background gradient (using color_theme) */}
-                                        <div className={`absolute inset-0 bg-gradient-to-br ${module.color_theme} opacity-5 group-hover:opacity-10 transition-opacity`} />
-
-                                        <CardContent className="p-6 relative">
-                                            {/* Module number badge */}
-                                            <div className="flex items-center justify-between mb-4">
-                                                <div className={`bg-gradient-to-br ${module.color_theme} px-3 py-1 rounded-full`}>
-                                                    <span className="text-white font-bold text-sm">Module {module.id}</span>
+                                    <Card className="group hover:shadow-2xl transition-all duration-300 cursor-pointer border-2 border-transparent hover:border-blue-300 relative overflow-hidden h-full flex flex-col">
+                                        <CardContent className="p-6 flex-1">
+                                            <div className="flex items-start justify-between mb-4">
+                                                <div className={`bg-gradient-to-br ${module.color_theme || 'from-blue-500 to-purple-500'} px-4 py-2 rounded-full shadow-lg`}>
+                                                    <span className="text-white font-bold text-sm">Module {index + 1}</span>
                                                 </div>
                                                 {isCompleted && (
-                                                    <CheckCircle2 className="w-6 h-6 text-green-500 fill-green-500" />
+                                                    <div className="bg-green-500 rounded-full p-2">
+                                                        <CheckCircle2 className="w-5 h-5 text-white" />
+                                                    </div>
                                                 )}
                                             </div>
 
@@ -240,7 +259,7 @@ export function Classes() {
                                                 <div className="flex items-center justify-between text-sm">
                                                     <span className="text-gray-600">{translations.vocabulary[language]}</span>
                                                     <span className="font-semibold text-gray-900">
-                                                        ... {translations.words[language]}
+                                                        {stats.totalWords} {translations.words[language]}
                                                     </span>
                                                 </div>
                                                 {testScore !== undefined && (

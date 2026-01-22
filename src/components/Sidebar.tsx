@@ -52,8 +52,7 @@ export function Sidebar() {
     { id: 'grammar', label: language === 'kz' ? 'Грамматика' : 'Грамматика', icon: BookMarked, path: '/learning/grammar' },
     { id: 'dialogues', label: language === 'kz' ? 'Диалогтар' : 'Диалоги', icon: MessageSquare, path: '/learning/dialogues' },
     { id: 'games', label: 'Mini-Games', icon: Gamepad, path: '/learning/games' },
-    { id: 'vocabulary', label: 'Smart Vocabulary', icon: BookOpen, path: '/learning/vocabulary' },
-    { id: 'medical', label: language === 'kz' ? 'Медициналық терминдер' : 'Медицинские термины', icon: Stethoscope, path: '/learning/medical' },
+    { id: 'vocabulary', label: language === 'kz' ? 'Сөздік' : 'Cловарь', icon: BookOpen, path: '/learning/vocabulary' },
     { id: 'voice', label: t.voicePractice, icon: Volume2, path: '/learning/voice' },
     { id: 'content', label: t.contentHub, icon: Globe, path: '/learning/content' },
   ];
@@ -100,7 +99,7 @@ export function Sidebar() {
     <motion.aside
       initial={{ x: -100, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
-      className="w-64 bg-white/80 backdrop-blur-xl border-r border-gray-200/50 shadow-xl p-6 flex flex-col h-screen sticky top-0 overflow-y-auto"
+      className="w-64 bg-white/80 backdrop-blur-xl border-r border-gray-200/50 shadow-xl p-6 flex flex-col h-screen sticky top-0 overflow-y-auto hidden md:flex"
     >
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">

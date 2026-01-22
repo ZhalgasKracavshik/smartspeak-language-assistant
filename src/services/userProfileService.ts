@@ -1,5 +1,10 @@
 import { supabase } from '../lib/supabase';
 
+export interface ActivityLog {
+    date: string; // ISO date string YYYY-MM-DD
+    count: number; // minutes or actions count
+}
+
 export interface UserProfile {
     level: 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
     name?: string;
@@ -11,6 +16,8 @@ export interface UserProfile {
     levelNumber: number;
     streak: number;
     lastLoginDate: string;
+    role?: 'user' | 'admin' | 'teacher'; // Role for RBAC
+    activityHistory?: ActivityLog[]; // New field
     lastActivity?: {
         module: string;
         timestamp: string;
@@ -103,6 +110,7 @@ class UserProfileService {
                     levelNumber: Math.floor((data.xp || 0) / 100) + 1,
                     streak: data.progress?.streak || 0, // Load streak from progress
                     lastLoginDate: data.progress?.lastLoginDate || new Date().toISOString(),
+                    role: data.role || 'user', // Load role from profiles table
                     // Merge any extra data from progress jsonb if needed
                     ...data.progress
                 };
@@ -119,7 +127,11 @@ class UserProfileService {
             this.profile.levelNumber = 1;
             this.profile.streak = 0;
             this.profile.lastLoginDate = new Date().toISOString();
+            this.profile.activityHistory = [];
             this.saveProfile({});
+        }
+        if (this.profile && !this.profile.activityHistory) {
+            this.profile.activityHistory = [];
         }
     }
 
@@ -244,31 +256,64 @@ class UserProfileService {
      * Update streak logic
      * Should be called once per app load
      */
+    /**
+     * Check streak logic
+     */
     checkStreak(): void {
         if (!this.profile) return;
 
         const now = new Date();
         const lastLogin = new Date(this.profile.lastLoginDate);
+        const todayStr = now.toISOString().split('T')[0];
+        const lastLoginStr = lastLogin.toISOString().split('T')[0];
 
-        // Check if last login was yesterday (simple check)
-        const isYesterday = (
-            now.getDate() - lastLogin.getDate() === 1 &&
-            now.getMonth() === lastLogin.getMonth() &&
-            now.getFullYear() === lastLogin.getFullYear()
-        );
-
-        const isToday = (
-            now.getDate() === lastLogin.getDate() &&
-            now.getMonth() === lastLogin.getMonth() &&
-            now.getFullYear() === lastLogin.getFullYear()
-        );
-
-        if (isYesterday) {
-            this.saveProfile({ streak: (this.profile.streak || 0) + 1, lastLoginDate: now.toISOString() });
-        } else if (!isToday) {
-            // Reset streak if missed a day
-            this.saveProfile({ streak: 1, lastLoginDate: now.toISOString() });
+        // If already logged in today, do nothing (or maybe just ensure streak is at least 1)
+        if (todayStr === lastLoginStr) {
+            return;
         }
+
+        const yesterday = new Date(now);
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+        if (lastLoginStr === yesterdayStr) {
+            // Logged in yesterday -> Increment streak
+            this.saveProfile({
+                streak: (this.profile.streak || 0) + 1,
+                lastLoginDate: now.toISOString()
+            });
+        } else {
+            // Missed a day -> Reset streak
+            // Note: If account is new (streak 0), it becomes 1.
+            this.saveProfile({
+                streak: 1,
+                lastLoginDate: now.toISOString()
+            });
+        }
+    }
+
+    /**
+     * Log activity (e.g., time spent or lessons finished)
+     */
+    logActivity(minutes: number = 1): void {
+        if (!this.profile) return;
+
+        const today = new Date().toISOString().split('T')[0];
+        const history = this.profile.activityHistory || [];
+
+        const existingEntryIndex = history.findIndex(h => h.date === today);
+        let newHistory = [...history];
+
+        if (existingEntryIndex >= 0) {
+            newHistory[existingEntryIndex] = {
+                ...newHistory[existingEntryIndex],
+                count: newHistory[existingEntryIndex].count + minutes
+            };
+        } else {
+            newHistory.push({ date: today, count: minutes });
+        }
+
+        this.saveProfile({ activityHistory: newHistory });
     }
 
     /**

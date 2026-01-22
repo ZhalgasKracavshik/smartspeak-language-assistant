@@ -14,14 +14,17 @@ interface VocabularyWord {
     module: number;
 }
 
+import { PracticeQuestion } from '@/services/contentService';
+
 interface ModuleTestProps {
     vocabulary: VocabularyWord[];
     moduleNumber: number;
+    practiceQuestions?: PracticeQuestion[];
 }
 
 interface Question {
     id: number;
-    type: 'multiple-choice' | 'translation';
+    type: 'multiple-choice' | 'translation' | 'text';
     question: string;
     options?: string[];
     correctAnswer: string;
@@ -29,7 +32,7 @@ interface Question {
     isCorrect?: boolean;
 }
 
-export default function ModuleTest({ vocabulary, moduleNumber }: ModuleTestProps) {
+export default function ModuleTest({ vocabulary, moduleNumber, practiceQuestions = [] }: ModuleTestProps) {
     const [questions, setQuestions] = useState<Question[]>([]);
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
     const [score, setScore] = useState(0);
@@ -87,42 +90,193 @@ export default function ModuleTest({ vocabulary, moduleNumber }: ModuleTestProps
     const generateTest = () => {
         clearProgress();
 
-        if (vocabulary.length < 5) return;
-
         const newQuestions: Question[] = [];
-        // Generate 10 questions
-        for (let i = 0; i < 10; i++) {
-            const randomWord = vocabulary[Math.floor(Math.random() * vocabulary.length)];
-            const type = Math.random() > 0.5 ? 'multiple-choice' : 'translation';
+        let idCounter = 0;
 
-            if (type === 'multiple-choice') {
-                // Generate wrong options
-                const wrongOptions = vocabulary
-                    .filter(w => w.id !== randomWord.id)
-                    .sort(() => 0.5 - Math.random())
-                    .slice(0, 3)
-                    .map(w => w.translation_ru); // Using RU for now, could be toggleable
+        // 1. HARDCODED STANDARD ENGLISH QUESTIONS (Punctuation, Grammar Standards)
+        const standardQuestions: Question[] = [
+            // --- Tricky Punctuation (Dashes vs Semicolons) ---
+            {
+                id: idCounter++,
+                type: 'multiple-choice',
+                question: 'Which sentence correctly uses a colon?',
+                options: [
+                    'I have three sisters: Amy, Beth, and Jo.',
+                    'I have: three sisters Amy, Beth, and Jo.',
+                    'I have three sisters Amy: Beth, and Jo.',
+                    'I have three sisters Amy, Beth, and: Jo.'
+                ],
+                correctAnswer: 'I have three sisters: Amy, Beth, and Jo.'
+            },
+            {
+                id: idCounter++,
+                type: 'multiple-choice',
+                question: 'Choose the sentence with correct punctuation:',
+                options: [
+                    'Its a nice day, isn\'t it?',
+                    'It\'s a nice day, isn\'t it?',
+                    'Its a nice day isn\'t it?',
+                    'It\'s a nice day isnt it?'
+                ],
+                correctAnswer: 'It\'s a nice day, isn\'t it?'
+            },
+            {
+                id: idCounter++,
+                type: 'multiple-choice',
+                question: 'When do you use a semi-colon (;)?',
+                options: [
+                    'To end a sentence.',
+                    'To join two independent clauses that are closely related.',
+                    'To list items.',
+                    'To show possession.'
+                ],
+                correctAnswer: 'To join two independent clauses that are closely related.'
+            },
+            {
+                id: idCounter++,
+                type: 'multiple-choice',
+                question: 'Identify the correct use of "their", "there", and "they\'re":',
+                options: [
+                    'They\'re going towards their house.',
+                    'There going towards they\'re house.',
+                    'Their going towards there house.',
+                    'They\'re going towards there house.'
+                ],
+                correctAnswer: 'They\'re going towards their house.'
+            },
+            {
+                id: idCounter++,
+                type: 'multiple-choice',
+                question: 'Which sentence implies an abrupt break in thought?',
+                options: [
+                    'I need to buy apples, oranges, and bananas.',
+                    'I need to buy apples; however, I forgot my wallet.',
+                    'I need to buy apples—wait, I already have some!',
+                    'I need to buy (apples) and bananas.'
+                ],
+                correctAnswer: 'I need to buy apples—wait, I already have some!'
+            },
+            {
+                id: idCounter++,
+                type: 'multiple-choice',
+                question: 'Choose the correct sentence:',
+                options: [
+                    'The meeting was long; boring and pointless.',
+                    'The meeting was long, boring, and pointless.',
+                    'The meeting was long: boring and pointless.',
+                    'The meeting was long—boring; and pointless.'
+                ],
+                correctAnswer: 'The meeting was long, boring, and pointless.'
+            },
+            {
+                id: idCounter++,
+                type: 'multiple-choice',
+                question: 'Select the sentence where the semi-colon is used correctly:',
+                options: [
+                    'I love ice cream; especially vanilla.',
+                    'The store was closed; we went home.',
+                    'Because it was raining; we stayed inside.',
+                    'I have a dog; cat, and fish.'
+                ],
+                correctAnswer: 'The store was closed; we went home.'
+            },
+            {
+                id: idCounter++,
+                type: 'multiple-choice',
+                question: 'Which sentence correctly uses an em-dash?',
+                options: [
+                    'My friends-Sarah and John-are here.',
+                    'My friends: Sarah and John—are here.',
+                    'My friends—Sarah and John—are here.',
+                    'My friends; Sarah and John—are here.'
+                ],
+                correctAnswer: 'My friends—Sarah and John—are here.'
+            }
+        ];
 
-                const options = [...wrongOptions, randomWord.translation_ru].sort(() => 0.5 - Math.random());
+        // Add 3 random standard questions (increased from 2)
+        newQuestions.push(...standardQuestions.sort(() => 0.5 - Math.random()).slice(0, 3));
 
+        // 2. Practice Questions from DB (Forced Text)
+        if (practiceQuestions && practiceQuestions.length > 0) {
+            practiceQuestions.forEach(pq => {
                 newQuestions.push({
-                    id: i,
-                    type: 'multiple-choice',
-                    question: `Choose the correct translation for: "${randomWord.word}"`,
-                    options,
-                    correctAnswer: randomWord.translation_ru
+                    id: idCounter++,
+                    type: 'text',
+                    question: pq.question_en,
+                    correctAnswer: pq.answer_key || '',
+                    userAnswer: undefined
                 });
-            } else {
-                // Translation question (type the word)
-                newQuestions.push({
-                    id: i,
-                    type: 'translation',
-                    question: `Translate to English: "${randomWord.translation_ru}"`,
-                    correctAnswer: randomWord.word
-                });
+            });
+        }
+
+        // 3. Vocabulary Questions (Hard Mode)
+        // Filter for "harder" words (longer length)
+        const hardVocab = vocabulary.filter(w => w.word.length > 5);
+        const pool = hardVocab.length >= 5 ? hardVocab : vocabulary;
+
+        // Ensure we don't exceed 10 questions total if we already have many from steps 1 & 2
+        const currentCount = newQuestions.length;
+        const remainingSlots = 10 - currentCount;
+
+        if (pool.length >= 5 && remainingSlots > 0) {
+            for (let i = 0; i < remainingSlots; i++) {
+                const randomWord = pool[Math.floor(Math.random() * pool.length)];
+
+                // User Request: "Make it so there is an input field and user enters correct translation"
+                // Increasing Text Input probability to 80% for challenging tests
+                const isWriteTask = Math.random() > 0.2;
+
+                if (isWriteTask) {
+                    newQuestions.push({
+                        id: idCounter++,
+                        type: 'text', // Strict writing
+                        question: `Translate to English: "${randomWord.translation_ru}"`,
+                        correctAnswer: randomWord.word
+                    });
+                } else {
+                    // Multiple Choice with Smart Distractors
+                    // Attempt to find words with similar length or starting letter to confuse user
+                    const similarWords = vocabulary
+                        .filter(w => w.id !== randomWord.id && Math.abs(w.word.length - randomWord.word.length) <= 2)
+                        .slice(0, 3);
+
+                    let wrongOptions: string[];
+
+                    if (similarWords.length >= 3) {
+                        wrongOptions = similarWords.map(w => w.translation_ru);
+                    } else {
+                        // Fallback to random if no similar words found
+                        wrongOptions = vocabulary
+                            .filter(w => w.id !== randomWord.id)
+                            .sort(() => 0.5 - Math.random())
+                            .slice(0, 3)
+                            .map(w => w.translation_ru);
+                    }
+
+                    const options = [...wrongOptions, randomWord.translation_ru].sort(() => 0.5 - Math.random());
+
+                    newQuestions.push({
+                        id: idCounter++,
+                        type: 'multiple-choice',
+                        question: `Choose the correct translation for: "${randomWord.word}"`,
+                        options,
+                        correctAnswer: randomWord.translation_ru
+                    });
+                }
             }
         }
-        setQuestions(newQuestions);
+
+        // Shuffle all questions so standard/vocab/practice are mixed
+        const shuffledQuestions = newQuestions.sort(() => 0.5 - Math.random());
+
+        // Ensure IDs are sequential after shuffle (optional, but good for "Question 1 of 10")
+        // Actually, better to keep distinct IDs, just slice if needed.
+        const finalQuestions = shuffledQuestions.slice(0, 10);
+
+        if (finalQuestions.length === 0) return;
+
+        setQuestions(finalQuestions);
         setTestStarted(true);
         setShowResults(false);
         setScore(0);
@@ -131,13 +285,46 @@ export default function ModuleTest({ vocabulary, moduleNumber }: ModuleTestProps
         setIsSubmitting(false);
     };
 
-    const handleAnswer = (answer: string) => {
+    const handleAnswer = async (answer: string) => {
         if (isSubmittingRef.current) return;
+
+        // Safety check for empty/null answer
+        if (!answer) return;
+
         isSubmittingRef.current = true;
         setIsSubmitting(true);
 
         const currentQuestion = questions[currentQuestionIndex];
-        const isCorrect = answer.toLowerCase().trim() === currentQuestion.correctAnswer.toLowerCase().trim();
+        let isCorrect = false;
+
+        // --- AI VERIFICATION FOR TEXT ANSWERS ---
+        if (currentQuestion.type === 'text' || currentQuestion.type === 'translation') {
+            try {
+                // Optimistic check first (exact match)
+                if (answer.trim().toLowerCase() === currentQuestion.correctAnswer.trim().toLowerCase()) {
+                    isCorrect = true;
+                } else {
+                    // Call API for semantic check
+                    const response = await fetch('/api/test/check', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            question: currentQuestion.question,
+                            userAnswer: answer,
+                            correctAnswer: currentQuestion.correctAnswer
+                        })
+                    });
+                    const data = await response.json();
+                    isCorrect = data.isCorrect;
+                }
+            } catch (error) {
+                console.error("AI Check Failed, falling back to strict match", error);
+                isCorrect = answer.trim().toLowerCase() === currentQuestion.correctAnswer.trim().toLowerCase();
+            }
+        } else {
+            // Standard Multiple Choice Check
+            isCorrect = answer === currentQuestion.correctAnswer;
+        }
 
         const updatedQuestions = [...questions];
         updatedQuestions[currentQuestionIndex] = {
@@ -157,11 +344,13 @@ export default function ModuleTest({ vocabulary, moduleNumber }: ModuleTestProps
                 setShowResults(true);
                 saveResult(score + (isCorrect ? 1 : 0));
             }
-        }, 1000);
+        }, 1500); // Slightly longer delay to read feedback
     };
 
     const saveResult = (finalScore: number) => {
         const percentage = Math.round((finalScore / questions.length) * 100);
+
+        // 1. Save Test History
         const history = JSON.parse(localStorage.getItem(`grade9_module_${moduleNumber}_tests`) || '[]');
         history.push({
             date: new Date().toISOString(),
@@ -169,6 +358,32 @@ export default function ModuleTest({ vocabulary, moduleNumber }: ModuleTestProps
             totalQuestions: questions.length
         });
         localStorage.setItem(`grade9_module_${moduleNumber}_tests`, JSON.stringify(history));
+
+        // 2. Update Main Dashboard Progress (Fixes 0% bug)
+        const dashboardProgress = JSON.parse(localStorage.getItem('grade9-progress') || '{}');
+
+        if (!dashboardProgress[moduleNumber]) {
+            dashboardProgress[moduleNumber] = {
+                moduleId: moduleNumber,
+                wordsLearned: [],
+                grammarCompleted: [],
+                testScore: 0,
+                markedComplete: false
+            };
+        }
+
+        // Only overwrite if new score is higher
+        const currentBest = dashboardProgress[moduleNumber].testScore || 0;
+        if (percentage > currentBest) {
+            dashboardProgress[moduleNumber].testScore = percentage;
+        }
+
+        // Mark complete if > 70%
+        if (percentage >= 70) {
+            dashboardProgress[moduleNumber].markedComplete = true;
+        }
+
+        localStorage.setItem('grade9-progress', JSON.stringify(dashboardProgress));
 
         // Clear in-progress data since test is complete
         clearProgress();

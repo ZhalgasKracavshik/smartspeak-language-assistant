@@ -1,39 +1,124 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@/utils/supabase/server';
 
-const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
-
-/**
- * POST /api/subtitles
- * Create subtitle entry (supports single or batch insert)
- */
-export async function POST(request: NextRequest) {
+export async function GET(request: NextRequest) {
     try {
-        const body = await request.json();
+        const supabase = await createClient();
+        const { searchParams } = new URL(request.url);
+        const mediaId = searchParams.get('mediaId');
+        const videoUrl = searchParams.get('videoUrl');
+        const videoId = searchParams.get('videoId');
 
-        // Check if body is array (batch insert) or object (single insert)
-        const { data, error } = await supabase
-            .from('subtitles')
-            .insert(body) // Supabase handles both array and object
-            .select();
-
-        if (error) {
-            console.error('Error creating subtitle:', error);
-            return NextResponse.json(
-                { error: 'Failed to create subtitle' },
-                { status: 500 }
-            );
+        if (!mediaId && !videoUrl && !videoId) {
+            return NextResponse.json({ error: 'Media ID, Video URL, or Video ID required' }, { status: 400 });
         }
 
-        return NextResponse.json(data, { status: 201 });
+        let query = supabase
+            .from('subtitles')
+            .select('*')
+            .order('start_time', { ascending: true });
+
+        if (mediaId) {
+            query = query.eq('media_id', mediaId);
+        } else if (videoUrl || videoId) {
+            const searchVal = videoUrl || videoId;
+            // Find media item by URL or cloudinary_id (which might store the youtube ID)
+            const { data: media } = await supabase
+                .from('media_content')
+                .select('id')
+                .or(`cloudinary_url.ilike.%${searchVal}%,url.ilike.%${searchVal}%,cloudinary_id.eq.${videoId}`)
+                .single();
+
+            if (media) {
+                query = query.eq('media_id', media.id);
+            } else if (videoId) {
+                // Try searching directly by videoId if it looks like a UUID
+                if (videoId.length === 36) {
+                    query = query.eq('media_id', videoId);
+                } else {
+                    return NextResponse.json([]);
+                }
+            } else {
+                return NextResponse.json([]);
+            }
+        }
+
+        const { data, error } = await query;
+
+        if (error) {
+            return NextResponse.json({ error: error.message }, { status: 500 });
+        }
+
+        // FALLBACK: If no subtitles in 'subtitles' table, check 'subtitle_cache'
+        if ((!data || data.length === 0) && videoUrl) {
+            const { data: cached } = await supabase
+                .from('subtitle_cache')
+                .select('subtitles')
+                .eq('video_url', videoUrl)
+                .single();
+
+            if (cached?.subtitles) {
+                return NextResponse.json(cached.subtitles);
+            }
+        }
+
+        return NextResponse.json(data || []);
     } catch (error) {
-        console.error('Unexpected error:', error);
-        return NextResponse.json(
-            { error: 'Internal server error' },
-            { status: 500 }
-        );
+        console.error('API error:', error);
+        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    }
+}
+
+export async function PUT(request: NextRequest) {
+    try {
+        const supabase = await createClient();
+        const body = await request.json();
+        const { id, ...updates } = body;
+
+        if (!id) {
+            return NextResponse.json({ error: 'Subtitle ID required' }, { status: 400 });
+        }
+
+        const { data, error } = await supabase
+            .from('subtitles')
+            .update(updates)
+            .eq('id', id)
+            .select()
+            .single();
+
+        if (error) {
+            return NextResponse.json({ error: error.message }, { status: 500 });
+        }
+
+        return NextResponse.json(data);
+    } catch (error) {
+        console.error('API error:', error);
+        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    }
+}
+
+export async function DELETE(request: NextRequest) {
+    try {
+        const supabase = await createClient();
+        const { searchParams } = new URL(request.url);
+        const id = searchParams.get('id');
+
+        if (!id) {
+            return NextResponse.json({ error: 'Subtitle ID required' }, { status: 400 });
+        }
+
+        const { error } = await supabase
+            .from('subtitles')
+            .delete()
+            .eq('id', id);
+
+        if (error) {
+            return NextResponse.json({ error: error.message }, { status: 500 });
+        }
+
+        return NextResponse.json({ success: true });
+    } catch (error) {
+        console.error('API error:', error);
+        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

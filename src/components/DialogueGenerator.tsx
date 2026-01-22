@@ -20,65 +20,73 @@ export function DialogueGenerator() {
   const [isGenerating, setIsGenerating] = useState(false);
   const audioService = getAudioService();
 
-  // Simulated Speech Recognition Hook (similar to VoicePractice)
+  // Speech Recognition Hook - Real browser voice input only
   const useSpeechRecognition = () => {
     const [isListening, setIsListening] = useState(false);
     const [transcript, setTranscript] = useState('');
 
     const startListening = (onResult: (text: string) => void) => {
+      // Check if browser supports speech recognition
+      if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+        alert('Speech recognition is not supported in this browser. Please use Chrome, Edge, or Safari.');
+        return;
+      }
+
       setIsListening(true);
       setTranscript('');
 
-      // Check if browser supports speech recognition
-      if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-        const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
-        const recognition = new SpeechRecognition();
-        recognition.lang = 'en-US';
-        recognition.interimResults = true; // Enable interim results for real-time display
-        recognition.maxAlternatives = 1;
+      const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'en-US';
+      recognition.interimResults = true; // Enable interim results for real-time display
+      recognition.maxAlternatives = 1;
+      recognition.continuous = false; // Stop after one phrase
 
-        recognition.onresult = (event: any) => {
-          let interimTranscript = '';
-          let finalTranscript = '';
+      recognition.onresult = (event: any) => {
+        let interimTranscript = '';
+        let finalTranscript = '';
 
-          for (let i = event.resultIndex; i < event.results.length; ++i) {
-            if (event.results[i].isFinal) {
-              finalTranscript += event.results[i][0].transcript;
-            } else {
-              interimTranscript += event.results[i][0].transcript;
-            }
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            finalTranscript += event.results[i][0].transcript;
+          } else {
+            interimTranscript += event.results[i][0].transcript;
           }
+        }
 
-          const currentTranscript = finalTranscript || interimTranscript;
-          setTranscript(currentTranscript);
+        const currentTranscript = finalTranscript || interimTranscript;
+        setTranscript(currentTranscript);
 
-          if (finalTranscript) {
-            onResult(finalTranscript);
-            setIsListening(false);
-          }
-        };
-
-        recognition.onerror = () => {
+        // Only call onResult when we have a final transcript
+        if (finalTranscript) {
+          onResult(finalTranscript);
           setIsListening(false);
-          alert('Microphone error. Please check permissions.');
-        };
+        }
+      };
 
-        recognition.onend = () => {
-          // Don't set isListening to false here immediately if we want to keep showing the last result, 
-          // but usually onend means it stopped. 
-          // We'll handle state in onResult or manual stop.
-          if (isListening) setIsListening(false);
-        };
+      recognition.onerror = (event: any) => {
+        console.error('Speech recognition error:', event.error);
+        setIsListening(false);
 
+        if (event.error === 'no-speech') {
+          alert('No speech detected. Please try again.');
+        } else if (event.error === 'not-allowed') {
+          alert('Microphone access denied. Please allow microphone permissions in your browser settings.');
+        } else {
+          alert('Speech recognition error. Please try again.');
+        }
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+      };
+
+      try {
         recognition.start();
-      } else {
-        // Fallback for browsers without support (Simulation)
-        setTimeout(() => {
-          const simulatedText = "Simulated speech input";
-          setTranscript(simulatedText);
-          onResult(simulatedText);
-          setIsListening(false);
-        }, 2000);
+      } catch (error) {
+        console.error('Failed to start recognition:', error);
+        setIsListening(false);
+        alert('Failed to start voice recognition. Please try again.');
       }
     };
 

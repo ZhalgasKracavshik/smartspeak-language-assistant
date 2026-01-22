@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { RefreshCw, ArrowRight, ArrowLeft, Shuffle, Check, X } from 'lucide-react';
+import { RefreshCw, ArrowRight, ArrowLeft, Shuffle, Check, X, Volume2 } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 
@@ -75,6 +76,13 @@ function Flashcards({ words }: { words: VocabularyWord[] }) {
         }, 200);
     };
 
+    const playAudio = (e: React.MouseEvent, text: string) => {
+        e.stopPropagation(); // Prevent card flip
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'en-GB';
+        window.speechSynthesis.speak(utterance);
+    };
+
     const currentWord = shuffledWords[currentIndex];
 
     return (
@@ -96,7 +104,17 @@ function Flashcards({ words }: { words: VocabularyWord[] }) {
                     {/* Front */}
                     <Card className="absolute inset-0 backface-hidden flex flex-col items-center justify-center p-8 bg-white dark:bg-gray-800 shadow-lg border-2 border-blue-100 dark:border-blue-900">
                         <h3 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">{currentWord?.word}</h3>
-                        <p className="text-sm text-gray-400">Click to flip</p>
+                        <div className="flex items-center gap-2">
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="rounded-full hover:bg-blue-50 text-blue-500"
+                                onClick={(e) => playAudio(e, currentWord?.word)}
+                            >
+                                <Volume2 className="w-6 h-6" />
+                            </Button>
+                        </div>
+                        <p className="text-sm text-gray-400 mt-4">Click to flip</p>
                     </Card>
 
                     {/* Back */}

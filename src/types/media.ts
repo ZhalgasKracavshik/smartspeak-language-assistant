@@ -21,6 +21,7 @@ export interface Subtitle {
     end_time: number; // seconds
     text_en: string;
     text_ru?: string;
+    text_kz?: string;
     words: Word[];
 }
 

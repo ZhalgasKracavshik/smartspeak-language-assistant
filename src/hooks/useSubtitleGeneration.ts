@@ -9,6 +9,27 @@ export function useSubtitleGeneration() {
     const [isGenerating, setIsGenerating] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    const fetchExistingSubtitles = async (videoUrl: string) => {
+        setIsGenerating(true);
+        setError(null);
+        try {
+            const response = await fetch(`/api/subtitles?videoUrl=${encodeURIComponent(videoUrl)}`);
+            if (!response.ok) throw new Error('Failed to fetch existing subtitles');
+
+            const data = await response.json();
+            if (data && data.length > 0) {
+                setSubtitles(data);
+                return data;
+            }
+            return null;
+        } catch (err) {
+            console.warn('Subtitle fetch error:', err);
+            return null;
+        } finally {
+            setIsGenerating(false);
+        }
+    };
+
     const generateSubtitles = async (videoUrl: string, language: 'en' | 'kz' | 'ru' = 'en') => {
         setIsGenerating(true);
         setError(null);
@@ -57,6 +78,7 @@ export function useSubtitleGeneration() {
         subtitles,
         isGenerating,
         error,
+        fetchExistingSubtitles,
         generateSubtitles,
         clearSubtitles,
     };

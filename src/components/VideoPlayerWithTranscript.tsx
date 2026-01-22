@@ -7,6 +7,7 @@ import { Button } from './ui/button';
 import { fetchTranscript, TranscriptSegment, findActiveSegment } from '../services/transcriptService';
 import { useLanguage } from '../contexts/LanguageContext';
 import { MediaType } from '@/types/media';
+import { contentService } from '../services/contentService';
 
 interface VideoPlayerWithTranscriptProps {
     isOpen: boolean;
@@ -41,10 +42,30 @@ export function VideoPlayerWithTranscript({
         const loadTranscript = async () => {
             setIsLoadingTranscript(true);
             try {
-                const segments = await fetchTranscript(videoId, title, type);
-                setTranscript(segments);
+                // 1. Try to fetch from DB first
+                const dbSubtitles = await contentService.getSubtitles(videoId);
+
+                if (dbSubtitles && dbSubtitles.length > 0) {
+                    console.log('✅ Loaded subtitles from DB');
+                    // Map DB format to TranscriptSegment
+                    // DB usually has start_time, end_time, text_en (or just text)
+                    const mapped = dbSubtitles.map((s: any) => ({
+                        text: s.text_en || s.text || '',
+                        startTime: s.start_time,
+                        endTime: s.end_time
+                    }));
+                    setTranscript(mapped);
+                } else {
+                    // 2. Fallback to YouTube
+                    console.log('ℹ️ No DB subtitles, fetching from YouTube');
+                    const segments = await fetchTranscript(videoId, title, type);
+                    setTranscript(segments);
+                }
             } catch (error) {
                 console.error('Failed to load transcript:', error);
+                // Last resort fallback
+                const segments = await fetchTranscript(videoId, title, type);
+                setTranscript(segments);
             } finally {
                 setIsLoadingTranscript(false);
             }

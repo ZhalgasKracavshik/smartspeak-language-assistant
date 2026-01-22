@@ -233,7 +233,7 @@ Input: ${JSON.stringify(sentences)}`;
 
         const duration = subtitles[subtitles.length - 1]?.end_time || 0;
 
-        // Step 7: Save to cache
+        // Step 7: Save to cache AND attempt to save to main subtitles table
         console.log('Saving to cache...');
         await supabase
             .from('subtitle_cache')
@@ -243,6 +243,32 @@ Input: ${JSON.stringify(sentences)}`;
                 duration: duration,
                 provider: 'deepgram'
             });
+
+        // Try to find if this video exists in media_content to link permanently
+        const { data: media } = await supabase
+            .from('media_content')
+            .select('id')
+            .or(`cloudinary_url.eq."${videoUrl}",url.eq."${videoUrl}"`)
+            .single();
+
+        if (media) {
+            console.log('Linking subtitles to media:', media.id);
+            // Delete old subtitles for this media first
+            await supabase.from('subtitles').delete().eq('media_id', media.id);
+
+            // Insert new subtitles
+            const subtitlesToInsert = subtitles.map((s: any) => ({
+                media_id: media.id,
+                start_time: s.start_time,
+                end_time: s.end_time,
+                text_en: s.text_en,
+                text_ru: s.text_ru,
+                words: s.words
+            }));
+
+            const { error: insertError } = await supabase.from('subtitles').insert(subtitlesToInsert);
+            if (insertError) console.error('Error saving to subtitles table:', insertError);
+        }
 
         return NextResponse.json({
             subtitles,

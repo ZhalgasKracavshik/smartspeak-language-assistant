@@ -1,0 +1,9 @@
+# Exclude backup folder from deployment
+backup/
+.n8n-setup/
+*.log
+*.txt
+db/
+scripts/
+*.js.map
+tsconfig.tsbuildinfo

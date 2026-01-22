@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
-import { Mic, BookOpen, MessageSquare, BookMarked, Target, Zap, Award, Clock, TrendingUp, Globe, Play, ArrowRight } from 'lucide-react';
+import { Mic, BookOpen, MessageSquare, BookMarked, Target, Zap, Award, Clock, TrendingUp, Globe, Play, ArrowRight, Trophy, Flame, Star, Calendar, Crown } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -15,6 +15,7 @@ import { SmartChat } from './SmartChat';
 import { Profile } from './Profile';
 import { generateDailyContent } from '../services/dailyContentService';
 import DailyRecommendations from './DailyRecommendations';
+import { ActiveQuests } from './ActiveQuests';
 
 interface DashboardProps {
   onNavigate: (tab: string) => void;
@@ -158,6 +159,14 @@ export function Dashboard({ onNavigate, activeTab, onLogout }: DashboardProps) {
       color: 'text-blue-500',
       bg: 'bg-blue-50',
     },
+    {
+      label: language === 'kz' ? 'Стрик' : 'Streak',
+      value: progress.streak.toString(),
+      icon: Flame,
+      color: 'text-orange-600',
+      bg: 'bg-orange-50',
+      special: 'flame' // Mark for animation
+    },
   ];
 
   // Get random recommendations from DB
@@ -215,12 +224,17 @@ export function Dashboard({ onNavigate, activeTab, onLogout }: DashboardProps) {
           >
             <Card className="border-none shadow-sm hover:shadow-md transition-shadow">
               <CardContent className="p-6 flex items-center gap-4">
-                <div className={`p-3 rounded-xl ${stat.bg}`}>
-                  <stat.icon className={`w-6 h-6 ${stat.color}`} />
+                <div className={`p-3 rounded-xl ${stat.bg} ${(stat as any).special === 'flame' ? 'animate-pulse' : ''}`}>
+                  <stat.icon className={`w-6 h-6 ${stat.color} ${(stat as any).special === 'flame' && progress.streak > 0 ? 'animate-bounce' : ''}`} />
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-500">{stat.label}</p>
-                  <h3 className="text-2xl font-bold text-gray-900">{stat.value}</h3>
+                  <h3 className="text-2xl font-bold text-gray-900">
+                    {stat.value}
+                    {(stat as any).special === 'flame' && progress.streak > 7 && (
+                      <span className="ml-2 text-lg">🏆</span>
+                    )}
+                  </h3>
                 </div>
               </CardContent>
             </Card>
@@ -277,14 +291,75 @@ export function Dashboard({ onNavigate, activeTab, onLogout }: DashboardProps) {
           </motion.div>
         </div>
 
-        {/* Recommendations */}
+        {/* Recommendations & Quests */}
+        <div>
+          <div className="space-y-6">
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              <ActiveQuests />
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.4 }}
+            >
+              <DailyRecommendations />
+            </motion.div>
+          </div>
+        </div>
+
+        {/* Leaderboard Widget */}
         <div>
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.3 }}
+            transition={{ delay: 0.5 }}
           >
-            <DailyRecommendations />
+            <h2 className="text-xl font-bold mb-4 text-gray-900 flex items-center gap-2">
+              <Trophy className="w-6 h-6 text-yellow-500" />
+              {language === 'kz' ? 'Көшбасшылар' : 'Лидерборд'}
+            </h2>
+            <Card className="border-0 shadow-md bg-gradient-to-br from-yellow-50 to-orange-50">
+              <CardContent className="p-6">
+                <div className="space-y-3">
+                  {[1, 2, 3].map((rank) => (
+                    <div
+                      key={rank}
+                      className="flex items-center gap-3 bg-white rounded-xl p-3 hover:shadow-md transition-shadow"
+                    >
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-white ${rank === 1 ? 'bg-yellow-500' : rank === 2 ? 'bg-gray-400' : 'bg-orange-600'
+                        }`}>
+                        {rank === 1 ? <Crown className="w-5 h-5" /> : rank}
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-semibold text-gray-900">
+                          {rank === 1 ? userName : `Student ${rank}`}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {rank === 1 ? userXp : Math.floor(userXp * (0.9 - rank * 0.1))} XP
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-semibold text-gray-700">
+                          {language === 'kz' ? 'Деңгей' : 'Level'} {rank === 1 ? userLevel : userLevel - rank + 1}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <Button
+                  variant="ghost"
+                  className="w-full mt-4 text-sm"
+                  onClick={() => { }}
+                >
+                  {language === 'kz' ? 'Толық көру' : 'Смотреть полностью'}
+                </Button>
+              </CardContent>
+            </Card>
           </motion.div>
         </div>
       </div>

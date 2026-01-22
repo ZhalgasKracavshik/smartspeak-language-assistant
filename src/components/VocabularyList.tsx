@@ -2,16 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Check, Volume2 } from 'lucide-react';
-
-interface VocabularyWord {
-    id: string;
-    word: string;
-    translation_ru: string;
-    translation_kz: string;
-    partOfSpeech: string;
-    example: string;
-    module: number;
-}
+import { VocabularyWord } from '@/services/contentService';
 
 interface VocabularyListProps {
     words: VocabularyWord[];
@@ -21,6 +12,7 @@ interface VocabularyListProps {
 
 export default function VocabularyList({ words, moduleNumber, onProgressUpdate }: VocabularyListProps) {
     const [learnedWords, setLearnedWords] = useState<string[]>([]);
+    const [playingAudio, setPlayingAudio] = useState<string | null>(null);
 
     // Load learned words from localStorage
     useEffect(() => {
@@ -51,65 +43,85 @@ export default function VocabularyList({ words, moduleNumber, onProgressUpdate }
         onProgressUpdate(progress);
     };
 
-    const playAudio = (text: string) => {
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = 'en-GB';
-        window.speechSynthesis.speak(utterance);
+    const playAudio = (word: VocabularyWord) => {
+        if (word.audio_url) {
+            const audio = new Audio(word.audio_url);
+            setPlayingAudio(word.id);
+            audio.onended = () => setPlayingAudio(null);
+            audio.play().catch(e => console.error("Audio play failed", e));
+        } else {
+            // Fallback to TTS
+            const utterance = new SpeechSynthesisUtterance(word.word);
+            utterance.lang = 'en-GB';
+            window.speechSynthesis.speak(utterance);
+        }
     };
 
+    // Group words by section
+    const groupedWords = words.reduce((acc, word) => {
+        const key = word.section || 'General';
+        if (!acc[key]) acc[key] = [];
+        acc[key].push(word);
+        return acc;
+    }, {} as Record<string, VocabularyWord[]>);
+
+    const sortedSections = Object.keys(groupedWords).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {words.map((word) => {
-                const isLearned = learnedWords.includes(word.id);
+        <div className="space-y-8">
+            {sortedSections.map(section => (
+                <div key={section}>
+                    <h3 className="text-xl font-bold text-gray-800 dark:text-gray-200 mb-4 px-2 border-l-4 border-blue-500">
+                        {section === 'General' ? 'Vocabulary' : `Section ${section}`}
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {groupedWords[section].map((word) => {
+                            const isLearned = learnedWords.includes(word.id);
 
-                return (
-                    <div
-                        key={word.id}
-                        className={`bg-white dark:bg-gray-800 rounded-xl p-4 border-2 transition-all duration-200 ${isLearned
-                                ? 'border-green-500 dark:border-green-600 shadow-sm'
-                                : 'border-transparent shadow-sm hover:shadow-md'
-                            }`}
-                    >
-                        <div className="flex justify-between items-start">
-                            <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-1">
-                                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-                                        {word.word}
-                                    </h3>
-                                    <button
-                                        onClick={() => playAudio(word.word)}
-                                        className="p-1 text-gray-400 hover:text-blue-500 transition-colors"
-                                    >
-                                        <Volume2 className="w-4 h-4" />
-                                    </button>
-                                    <span className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded-full">
-                                        {word.partOfSpeech}
-                                    </span>
+                            return (
+                                <div
+                                    key={word.id}
+                                    className={`bg-white dark:bg-gray-800 rounded-xl p-4 border-2 transition-all duration-200 ${isLearned
+                                        ? 'border-green-500 dark:border-green-600 shadow-sm'
+                                        : 'border-transparent shadow-sm hover:shadow-md'
+                                        }`}
+                                >
+                                    <div className="flex justify-between items-start">
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                                                    {word.word}
+                                                </h3>
+                                                <button
+                                                    onClick={() => playAudio(word)}
+                                                    className={`p-1 transition-colors ${playingAudio === word.id ? 'text-blue-600' : 'text-gray-400 hover:text-blue-500'}`}
+                                                >
+                                                    <Volume2 className="w-4 h-4" />
+                                                </button>
+                                            </div>
+
+                                            <div className="text-sm text-gray-600 dark:text-gray-300 mb-2 space-y-0.5">
+                                                <p><span className="text-gray-400 text-xs uppercase mr-1">RU</span> {word.translation_ru}</p>
+                                                <p><span className="text-gray-400 text-xs uppercase mr-1">KZ</span> {word.translation_kz}</p>
+                                            </div>
+                                        </div>
+
+                                        <button
+                                            onClick={() => toggleWord(word.id)}
+                                            className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-colors ${isLearned
+                                                ? 'bg-green-500 text-white'
+                                                : 'bg-gray-100 dark:bg-gray-700 text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                                                }`}
+                                        >
+                                            <Check className="w-5 h-5" />
+                                        </button>
+                                    </div>
                                 </div>
-
-                                <div className="text-sm text-gray-600 dark:text-gray-300 mb-2 space-y-0.5">
-                                    <p><span className="text-gray-400 text-xs uppercase mr-1">RU</span> {word.translation_ru}</p>
-                                    <p><span className="text-gray-400 text-xs uppercase mr-1">KZ</span> {word.translation_kz}</p>
-                                </div>
-
-                                <p className="text-sm italic text-gray-500 dark:text-gray-400 border-l-2 border-gray-200 dark:border-gray-700 pl-2">
-                                    "{word.example}"
-                                </p>
-                            </div>
-
-                            <button
-                                onClick={() => toggleWord(word.id)}
-                                className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-colors ${isLearned
-                                        ? 'bg-green-500 text-white'
-                                        : 'bg-gray-100 dark:bg-gray-700 text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
-                                    }`}
-                            >
-                                <Check className="w-5 h-5" />
-                            </button>
-                        </div>
+                            );
+                        })}
                     </div>
-                );
-            })}
+                </div>
+            ))}
         </div>
     );
 }

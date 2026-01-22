@@ -1,0 +1,226 @@
+/* Subtitle Animations */
+.video-container {
+    position: relative;
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.video-subtitle-overlay {
+    position: absolute;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.9), rgba(20, 20, 40, 0.95));
+    padding: 16px 32px;
+    border-radius: 12px;
+    max-width: 90%;
+    min-width: 300px;
+    text-align: center;
+    animation: fadeInUp 0.3s ease-out;
+    z-index: 100;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+}
+
+.subtitle-text {
+    display: block;
+    color: #ffffff;
+    font-size: 22px;
+    font-weight: 600;
+    line-height: 1.5;
+    text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.8);
+    letter-spacing: 0.3px;
+}
+
+.subtitle-translation {
+    display: block;
+    color: #93c5fd;
+    font-size: 17px;
+    margin-top: 8px;
+    font-style: italic;
+    opacity: 0.9;
+    text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.6);
+}
+
+/* Fade in from bottom animation */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(30px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+/* Karaoke effect (word highlighting) */
+.subtitle-text-karaoke {
+    display: inline;
+}
+
+.subtitle-word {
+    display: inline-block;
+    margin: 0 6px;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    color: #ffffff;
+}
+
+.subtitle-word.active {
+    color: #60a5fa;
+    transform: scale(1.15);
+    text-shadow:
+        0 0 10px rgba(96, 165, 250, 0.6),
+        0 0 20px rgba(96, 165, 250, 0.4);
+    font-weight: 700;
+}
+
+/* Control buttons */
+.video-controls {
+    display: flex;
+    gap: 12px;
+    margin-top: 16px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.subtitle-toggle-btn {
+    padding: 10px 20px;
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.subtitle-toggle-btn:hover {
+
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+}
+
+.subtitle-toggle-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.subtitle-generate-btn {
+    padding: 10px 20px;
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.subtitle-generate-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+}
+
+.subtitle-generate-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Loading spinner */
+.subtitle-loading {
+    display: inline-block;
+    margin-left: 8px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Error message */
+.subtitle-error {
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.1);
+    padding: 12px;
+    border-radius: 8px;
+    margin-top: 12px;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+/* Karaoke Active Layout */
+.karaoke-active-layout {
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.active-karaoke-line {
+    animation: pulseActive 2s infinite ease-in-out;
+}
+
+@keyframes pulseActive {
+    0% {
+        box-shadow: 0 0 10px rgba(59, 130, 246, 0.4);
+    }
+
+    50% {
+        box-shadow: 0 0 25px rgba(59, 130, 246, 0.7);
+    }
+
+    100% {
+        box-shadow: 0 0 10px rgba(59, 130, 246, 0.4);
+    }
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+    .video-subtitle-overlay {
+        bottom: 60px;
+        padding: 12px 20px;
+        max-width: 95%;
+        min-width: auto;
+    }
+
+    .subtitle-text {
+        font-size: 18px;
+    }
+
+    .subtitle-translation {
+        font-size: 15px;
+        margin-top: 6px;
+    }
+
+    .subtitle-word {
+        margin: 0 4px;
+    }
+}

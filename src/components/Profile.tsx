@@ -1,16 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'motion/react';
-import { User, Settings, LogOut, Trophy, Flame, Calendar, Edit2, Save, X, Search, UserPlus, Users, Map } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { User, Settings, LogOut, Trophy, Flame, Calendar, Edit2, Save, X, Search, UserPlus, Users, Map, Camera, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { Avatar, AvatarFallback } from './ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { useLanguage } from '../contexts/LanguageContext';
 import { getUserProfileService, UserProfile } from '../services/userProfileService';
 import { supabase } from '../lib/supabase';
 import { socialService, LeaderboardEntry } from '../services/socialService';
 import { ProgressMap } from './ProgressMap';
+import { ActivityCalendar } from './profile/ActivityCalendar';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog"
 
 interface ProfileProps {
     onLogout: () => void;
@@ -21,6 +31,7 @@ export function Profile({ onLogout }: ProfileProps) {
     const [profile, setProfile] = useState<UserProfile | null>(null);
     const [isEditing, setIsEditing] = useState(false);
     const [editName, setEditName] = useState('');
+    const [editAvatar, setEditAvatar] = useState('');
     const [isGuest, setIsGuest] = useState(false);
     const [activeTab, setActiveTab] = useState<'profile' | 'friends' | 'leaderboard' | 'journey'>('profile');
     const [friends, setFriends] = useState<any[]>([]);
@@ -31,20 +42,69 @@ export function Profile({ onLogout }: ProfileProps) {
     const [isLoadingFriends, setIsLoadingFriends] = useState(false);
     const [isLoadingLeaderboard, setIsLoadingLeaderboard] = useState(false);
     const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+    const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
 
     useEffect(() => {
-        const userProfile = getUserProfileService().getProfile();
-        setProfile(userProfile);
-        setEditName(userProfile?.name || '');
-        setIsGuest(localStorage.getItem('smartspeak-is-guest') === 'true');
+        const loadProfile = async () => {
+            const userProfile = getUserProfileService().getProfile();
+            setProfile(userProfile);
+            setEditName(userProfile?.name || '');
+            // Default avatar or existing
+            setEditAvatar(`https://api.dicebear.com/7.x/avataaars/svg?seed=${userProfile?.name || 'User'}`);
+            setIsGuest(localStorage.getItem('smartspeak-is-guest') === 'true');
+
+            // If not guest, ensure we have fresh data from database
+            if (!localStorage.getItem('smartspeak-is-guest')) {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (user) {
+                    const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+                    if (data) {
+                        // Update local profile with database values
+                        const freshProfile: UserProfile = {
+                            level: data.level || userProfile?.level || 'A1',
+                            name: data.full_name || userProfile?.name,
+                            interests: data.interests || userProfile?.interests || [],
+                            hasCompletedOnboarding: true,
+                            createdAt: data.created_at || new Date().toISOString(),
+                            lastUpdated: data.updated_at || new Date().toISOString(),
+                            xp: data.xp || 0,
+                            levelNumber: Math.floor((data.xp || 0) / 100) + 1,
+                            streak: data.progress?.streak || 0,
+                            lastLoginDate: data.progress?.lastLoginDate || new Date().toISOString(),
+                            role: data.role || 'user',
+                            activityHistory: data.progress?.activityHistory || []
+                        };
+                        setProfile(freshProfile);
+                    }
+                }
+            }
+        };
+        loadProfile();
     }, []);
 
     useEffect(() => {
+        let isMounted = true;
         const loadCurrentUser = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            setCurrentUserId(user?.id || null);
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (isMounted) {
+                    setCurrentUserId(user?.id || null);
+                    if (user) {
+                        setCurrentUserEmail(user.email || '');
+                        // Try to get avatar from metadata if available
+                        if (user.user_metadata?.avatar_url) {
+                            setEditAvatar(user.user_metadata.avatar_url);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to load user:', error);
+            }
         };
         loadCurrentUser();
+        return () => {
+            isMounted = false;
+        };
     }, []);
 
     useEffect(() => {
@@ -103,7 +163,7 @@ export function Profile({ onLogout }: ProfileProps) {
         }
     };
 
-    const handleSave = async () => {
+    const handleSaveProfile = async () => {
         if (profile) {
             const updatedProfile = { ...profile, name: editName };
             getUserProfileService().updateProfile(updatedProfile);
@@ -113,18 +173,22 @@ export function Profile({ onLogout }: ProfileProps) {
             if (!isGuest) {
                 const { data: { user } } = await supabase.auth.getUser();
                 if (user) {
-                    await supabase.from('profiles').update({ full_name: editName }).eq('id', user.id);
+                    // Update Supabase profile
+                    await supabase.from('profiles').update({
+                        full_name: editName,
+                        // If we were saving avatar url, we'd do it here too, but for now it's generated or basic
+                    }).eq('id', user.id);
+
+                    // Update Auth Metadata for Avatar (if we were persisting it there)
+                    await supabase.auth.updateUser({
+                        data: {
+                            full_name: editName,
+                            avatar_url: editAvatar
+                        }
+                    });
                 }
             }
         }
-    };
-
-    const handleLogout = async () => {
-        if (!isGuest) {
-            await supabase.auth.signOut();
-        }
-        localStorage.removeItem('smartspeak-is-guest');
-        onLogout();
     };
 
     if (!profile && !isGuest) return null;
@@ -138,10 +202,7 @@ export function Profile({ onLogout }: ProfileProps) {
                     <h1 className="text-3xl font-bold text-gray-900">{t.profile}</h1>
                     <p className="text-gray-500">Manage your account and view progress</p>
                 </div>
-                <Button variant="destructive" onClick={handleLogout} className="gap-2">
-                    <LogOut className="size-4" />
-                    {isGuest ? 'Exit Guest Mode' : 'Sign Out'}
-                </Button>
+                {/* Logout button removed - moved to Settings */}
             </motion.div>
 
             <div className="flex gap-2 bg-gray-100 p-1 rounded-xl w-fit">
@@ -151,6 +212,7 @@ export function Profile({ onLogout }: ProfileProps) {
                 <Button variant={activeTab === 'journey' ? 'default' : 'ghost'} onClick={() => setActiveTab('journey')} size="sm"><Map className="size-4 mr-1" />Journey</Button>
             </div>
 
+
             {activeTab === 'profile' && (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div className="md:col-span-2 space-y-6">
@@ -158,21 +220,67 @@ export function Profile({ onLogout }: ProfileProps) {
                             <CardHeader><CardTitle>Personal Information</CardTitle></CardHeader>
                             <CardContent className="space-y-6">
                                 <div className="flex items-center gap-4">
-                                    <Avatar className="size-20"><AvatarFallback className="text-2xl bg-blue-100 text-blue-600">{isGuest ? 'G' : (profile?.name?.[0] || 'U')}</AvatarFallback></Avatar>
+                                    <Avatar className="size-24 border-4 border-blue-50">
+                                        <AvatarImage src={editAvatar} />
+                                        <AvatarFallback className="text-2xl bg-blue-100 text-blue-600">{isGuest ? 'G' : (profile?.name?.[0] || 'U')}</AvatarFallback>
+                                    </Avatar>
                                     <div className="flex-1">
-                                        {isEditing ? (
-                                            <div className="flex gap-2">
-                                                <Input value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Enter your name" />
-                                                <Button size="icon" onClick={handleSave}><Save className="size-4" /></Button>
-                                                <Button size="icon" variant="ghost" onClick={() => setIsEditing(false)}><X className="size-4" /></Button>
-                                            </div>
-                                        ) : (
-                                            <div className="flex items-center gap-2">
+                                        <div className="flex items-center justify-between">
+                                            <div>
                                                 <h2 className="text-2xl font-bold">{isGuest ? 'Guest User' : (profile?.name || 'Student')}</h2>
-                                                {!isGuest && <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setIsEditing(true)}><Edit2 className="size-4 text-gray-400" /></Button>}
+                                                <p className="text-gray-500">{currentUserEmail || 'English Learner'}</p>
                                             </div>
-                                        )}
-                                        <p className="text-gray-500">{isGuest ? 'Progress not saved' : 'English Learner'}</p>
+                                            {!isGuest && (
+                                                <Dialog open={isEditing} onOpenChange={setIsEditing}>
+                                                    <DialogTrigger asChild>
+                                                        <Button variant="outline" size="sm">
+                                                            <Edit2 className="size-4 mr-2" />
+                                                            Edit Profile
+                                                        </Button>
+                                                    </DialogTrigger>
+                                                    <DialogContent>
+                                                        <DialogHeader>
+                                                            <DialogTitle>Edit Profile</DialogTitle>
+                                                            <DialogDescription>
+                                                                Make changes to your profile here. Click save when you're done.
+                                                            </DialogDescription>
+                                                        </DialogHeader>
+                                                        <div className="grid gap-4 py-4">
+                                                            <div className="grid grid-cols-4 items-center gap-4">
+                                                                <Label htmlFor="name" className="text-right">
+                                                                    Name
+                                                                </Label>
+                                                                <Input
+                                                                    id="name"
+                                                                    value={editName}
+                                                                    onChange={(e) => setEditName(e.target.value)}
+                                                                    className="col-span-3"
+                                                                />
+                                                            </div>
+                                                            <div className="grid grid-cols-4 items-center gap-4">
+                                                                <Label className="text-right">Avatar</Label>
+                                                                <div className="col-span-3 flex gap-2">
+                                                                    <Button
+                                                                        type="button"
+                                                                        variant="outline"
+                                                                        onClick={() => setEditAvatar(`https://api.dicebear.com/7.x/avataaars/svg?seed=${Math.random()}`)}
+                                                                    >
+                                                                        <RefreshCw className="size-4 mr-2" />
+                                                                        Generate New
+                                                                    </Button>
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex justify-center py-4">
+                                                                <img src={editAvatar} alt="Preview" className="size-24 rounded-full border" />
+                                                            </div>
+                                                        </div>
+                                                        <DialogFooter>
+                                                            <Button type="submit" onClick={handleSaveProfile}>Save changes</Button>
+                                                        </DialogFooter>
+                                                    </DialogContent>
+                                                </Dialog>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
@@ -187,6 +295,9 @@ export function Profile({ onLogout }: ProfileProps) {
                                 </div>
                             </CardContent>
                         </Card>
+
+                        {/* Activity Calendar Section */}
+                        <ActivityCalendar data={profile?.activityHistory || []} />
                     </div>
 
                     <Card className="h-fit">
@@ -210,7 +321,9 @@ export function Profile({ onLogout }: ProfileProps) {
                                 <div className="bg-green-100 p-2 rounded-lg"><Calendar className="size-5 text-green-600" /></div>
                                 <div>
                                     <p className="text-sm font-medium text-gray-900">Joined</p>
-                                    <p className="text-xs text-gray-500">{new Date().toLocaleDateString()}</p>
+                                    <p className="text-xs text-gray-500">
+                                        {profile?.createdAt ? new Date(profile.createdAt).toLocaleDateString() : new Date().toLocaleDateString()}
+                                    </p>
                                 </div>
                             </div>
                         </CardContent>
